@@ -1,7 +1,7 @@
 # Implementation — `api/` (`@wg/api`)
 
 > Locked implementation decisions for the Fastify + Drizzle API. Companion to
-> `impl-shared.md`. Trust-based loose-identity model (see `target_technical.md` §3).
+> `impl-shared.md`. Trust-based loose-identity model (see `target-technical.md` §3).
 
 ## Auth & identity
 
@@ -180,7 +180,7 @@ No `fastify-type-provider-zod` — explicit and dependency-light.
 ## Cron worker — `src/worker.ts`
 
 - **Separate entrypoint / `worker` compose service** (same image as `api`,
-  `command: node dist/worker.js`; see `DEPLOY.md`), sharing `db`, `services`, and
+  `command: node dist/worker.js`; see `deploy.md`), sharing `db`, `services`, and
   `sendPushToMember`; uses `node-cron`. Dispatch lives in `services/reminders.ts`.
 - **Meeting reminder** (~every 5 min): per meeting compute the next occurrence
   (fixed: `startsAt`; recurring: next `startsAt + k·recurEveryDays ≥ now`;

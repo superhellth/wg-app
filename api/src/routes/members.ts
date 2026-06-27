@@ -4,7 +4,7 @@ import {
   memberQuerySchema,
   updateMemberSchema,
 } from "@wg/shared";
-import { eq, isNull } from "drizzle-orm";
+import { asc, eq, isNull } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db/client.js";
 import { logActivity } from "../lib/activity.js";
@@ -19,7 +19,8 @@ export async function membersRoutes(app: FastifyInstance) {
     return db
       .select()
       .from(schema.members)
-      .where(includeArchived ? undefined : isNull(schema.members.archivedAt));
+      .where(includeArchived ? undefined : isNull(schema.members.archivedAt))
+      .orderBy(asc(schema.members.createdAt)); // stable order → stable member colors
   });
 
   // Add a member to the roster.

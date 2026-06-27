@@ -7,12 +7,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Self-hosted **PWA** for managing a single shared-living household (German *Wohngemeinschaft*). One WG, flat permissions (no admin), EUR only, German UI. Trust-based loose identity: no passwords. Designed to run on a home Raspberry Pi behind Caddy + Cloudflare Tunnel.
 
 Design docs are the source of truth — read them before non-trivial work:
-- `docs/TARGET_FUNCTIONALITY.md` — **what** the app does (membership, money split, fixed-cost board, shopping, chores, meetings, activity feed, push matrix).
-- `docs/target_technical.md` — **how** it's built/hosted (stack, data model, auth model, hosting).
-- `docs/impl-shared.md` + `docs/impl-api.md` — **locked implementation decisions** for the `shared` and `api` packages (auth headers, onboarding, error envelope, split math, balances, chores/meetings mechanics, cron). The most specific source for building out routes.
-- `docs/DEPLOY.md` — Pi deployment via Docker Compose (Caddy, Cloudflare Tunnel, USB-SSD Postgres, R2 backups).
+- `docs/target-functionality.md` — **what** the app does (membership, money split, fixed-cost board, shopping, chores, meetings, activity feed, push matrix).
+- `docs/target-technical.md` — **how** it's built/hosted (stack, data model, auth model, hosting).
+- `docs/impl-shared.md` + `docs/impl-api.md` + `docs/impl-web.md` — **locked implementation decisions** per package (auth headers, onboarding, error envelope, split math, balances, chores/meetings mechanics, cron; and the web design system, member-color signature, IA, identity gate, data layer, push). The most specific source for building out routes/UI.
+- `docs/deploy.md` — Pi deployment via Docker Compose (Caddy, Cloudflare Tunnel, USB-SSD Postgres, R2 backups).
 
-> Current state: `shared` is complete; the **api service is fully implemented** (all domain routes + services + auth + error envelope + cron worker dispatch) and typechecks/builds. Not yet done: Drizzle migrations are **not generated** (`pnpm db:generate` before any DB run), and the web app is still the starter `members` list. Routes have no automated tests yet, and the stack hasn't been run against a live Postgres.
+> Current state: `shared` complete; the **api service is fully implemented** (all domain routes + services + auth + error envelope + cron worker dispatch); the **web PWA is fully built** (design system, `src/api/` layer, identity gate + onboarding, all tab pages + forms, push/custom SW). All three packages typecheck + build. Not yet done: Drizzle migrations are **not generated** (`pnpm db:generate` before any DB run); no automated tests; the stack hasn't been run against a live Postgres; PWA icons (`/public/icon-192.png`, `icon-512.png`) not yet added.
 
 ## Commands
 
@@ -33,7 +33,7 @@ API-only extras (run in `api/`): `pnpm db:studio` (Drizzle Studio), `pnpm start`
 No test runner is configured yet.
 
 ### Docker (deploy + full-stack run)
-The Pi deploy is fully containerized (`docker-compose.yml`): `db`, one-shot `migrate`, `api`, `worker`, `caddy` (PWA + proxy), `cloudflared`. api + worker share the root `Dockerfile` (multi-stage `build`/`runtime`); the web/Caddy image is `web/Dockerfile`. `docker compose build && docker compose up -d`. Images must be **arm64** for the Pi. See `docs/DEPLOY.md`.
+The Pi deploy is fully containerized (`docker-compose.yml`): `db`, one-shot `migrate`, `api`, `worker`, `caddy` (PWA + proxy), `cloudflared`. api + worker share the root `Dockerfile` (multi-stage `build`/`runtime`); the web/Caddy image is `web/Dockerfile`. `docker compose build && docker compose up -d`. Images must be **arm64** for the Pi. See `docs/deploy.md`.
 
 ### Local prerequisites
 - Postgres reachable at `DATABASE_URL`. Copy `.env.example` → `api/.env` (server secrets) and a web `.env` (only `VITE_*` vars are exposed to the client).
@@ -46,7 +46,7 @@ pnpm monorepo, three packages (`pnpm-workspace.yaml`):
 
 - **`shared/`** (`@wg/shared`) — Zod schemas + inferred TS types, one file per domain (`expense.ts`, `chore.ts`, …) re-exported from `src/index.ts`. **Single source of validation truth**: both API (runtime `safeParse` in routes) and web (React Hook Form resolvers) import the same schemas. `common.ts` holds shared primitives — notably **all money is integer cents** (`cents`), EUR only.
 - **`api/`** (`@wg/api`) — Fastify + TypeScript. `src/index.ts` bootstraps; `src/routes/index.ts` registers domain routers under `/api/*`. DB via Drizzle (`src/db/schema.ts` is the full data model; `src/db/client.ts` exports `db` + `schema`). Env is validated through Zod in `src/env.ts` — add new config there. Business logic lives in `src/services/` (e.g. `netting.ts`).
-- **`web/`** (`@wg/web`) — Vite + React 18 + MUI (Emotion, no Tailwind). TanStack Query for server state (pull-based, `refetchOnWindowFocus`, no realtime). React Router. `src/api.ts` is the typed fetch wrapper. `vite-plugin-pwa` provides the installable PWA (app-shell cache only today; custom service worker for Web Push is planned via `injectManifest`).
+- **`web/`** (`@wg/web`) — Vite + React 18 + MUI (Emotion, no Tailwind). TanStack Query for server state (pull-based, `refetchOnWindowFocus`, no realtime). React Router (`createBrowserRouter`, three-state identity gate in `src/app/guards.tsx`). **`src/api/`** is the data layer: `client.ts` (typed fetch, injects `Authorization`+`X-Member-Id`, unwraps the error envelope), `identity.ts` (localStorage `wgToken`/`memberId` + `useIdentity`), per-domain files with co-located Query hooks, `keys.ts`. Design system in `theme.ts` + `theme/memberColors.ts` (the signature: per-member colors derived from roster order via `useMemberColor`). `vite-plugin-pwa` in **`injectManifest`** mode with a custom `src/sw.ts` (app-shell cache + Web Push); `src/sw.ts` is excluded from the app tsconfig and compiled by the plugin.
 
 ### Key invariants (from the design docs)
 

@@ -1,5 +1,7 @@
 # WG App — Target Functionality
 
+why dist-tsnode in /web
+
 > Functional specification for a shared-living (Wohngemeinschaft) management app.
 > Scope of this document: **what** the app does. Technical choices (framework, backend, storage) are deliberately out of scope and decided later.
 
@@ -7,7 +9,7 @@
 
 | Decision | Choice |
 |----------|--------|
-| Platform | Native mobile app (iOS + Android) |
+| Platform | React web PWA |
 | Scope | **Single WG** — one household, no multi-group/group-switching |
 | Permission model | **Flat** — all members equal, no admin role |
 | Currency | EUR only (no multi-currency) |

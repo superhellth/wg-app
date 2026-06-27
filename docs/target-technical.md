@@ -1,6 +1,6 @@
 # WG App — Target Technical Architecture
 
-> Technical companion to `TARGET_FUNCTIONALITY.md`. Defines **how** the app is built, hosted, and distributed.
+> Technical companion to `target-functionality.md`. Defines **how** the app is built, hosted, and distributed.
 > Stack theme: a **self-hosted PWA** — React web app installed to home screen, talking to a Node API on a home Raspberry Pi.
 
 ## 0. Stack at a glance
