@@ -1,0 +1,107 @@
+# WG app — full stack for the Raspberry Pi (4 GB).
+# Build arm64 images on a dev machine with buildx, or build on the Pi directly.
+#
+# Compose reads the top-level .env automatically (POSTGRES_PASSWORD, VITE_*,
+# TUNNEL_TOKEN). App secrets (WG_TOKEN_SECRET, VAPID_*) come from api/.env.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wg
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: wg
+    # Postgres data on the USB SSD (SD-wear mitigation). Create /mnt/data/pgdata first.
+    volumes:
+      - /mnt/data/pgdata:/var/lib/postgresql/data
+    # Trim logging + WAL footprint for flash endurance.
+    command:
+      - postgres
+      - -c
+      - logging_collector=off
+      - -c
+      - log_statement=none
+      - -c
+      - max_wal_size=512MB
+      - -c
+      - min_wal_size=80MB
+      - -c
+      - checkpoint_timeout=15min
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wg -d wg"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # One-shot: apply Drizzle migrations, then exit. Uses the build stage (has
+  # drizzle-kit). Requires committed migrations in api/drizzle (pnpm db:generate).
+  migrate:
+    build:
+      context: .
+      target: build
+    command: pnpm --filter @wg/api db:migrate
+    env_file: ./api/.env
+    environment:
+      DATABASE_URL: postgres://wg:${POSTGRES_PASSWORD}@db:5432/wg
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      target: runtime
+    restart: unless-stopped
+    env_file: ./api/.env
+    environment:
+      DATABASE_URL: postgres://wg:${POSTGRES_PASSWORD}@db:5432/wg
+      HOST: 0.0.0.0
+      PORT: "3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  # Same image as api, different entrypoint: cron worker (time-based push).
+  worker:
+    build:
+      context: .
+      target: runtime
+    command: node dist/worker.js
+    restart: unless-stopped
+    env_file: ./api/.env
+    environment:
+      DATABASE_URL: postgres://wg:${POSTGRES_PASSWORD}@db:5432/wg
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  # Static PWA + reverse proxy. VITE_* baked at build time.
+  caddy:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+        VITE_VAPID_PUBLIC_KEY: ${VITE_VAPID_PUBLIC_KEY}
+    restart: unless-stopped
+    ports:
+      - "80:80" # for local LAN access / debugging; the tunnel uses the internal net
+    depends_on:
+      - api
+
+  # Outbound Cloudflare Tunnel (token mode). Point the public hostname at
+  # http://caddy:80 in the Cloudflare dashboard.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+    depends_on:
+      - caddy

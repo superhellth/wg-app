@@ -7,10 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Self-hosted **PWA** for managing a single shared-living household (German *Wohngemeinschaft*). One WG, flat permissions (no admin), EUR only, German UI. Trust-based loose identity: no passwords. Designed to run on a home Raspberry Pi behind Caddy + Cloudflare Tunnel.
 
 Design docs are the source of truth — read them before non-trivial work:
-- `TARGET_FUNCTIONALITY.md` — **what** the app does (membership, money split, fixed-cost board, shopping, chores, meetings, activity feed, push matrix).
-- `target_technical.md` — **how** it's built/hosted (stack, data model, auth model, hosting).
+- `docs/TARGET_FUNCTIONALITY.md` — **what** the app does (membership, money split, fixed-cost board, shopping, chores, meetings, activity feed, push matrix).
+- `docs/target_technical.md` — **how** it's built/hosted (stack, data model, auth model, hosting).
 - `docs/impl-shared.md` + `docs/impl-api.md` — **locked implementation decisions** for the `shared` and `api` packages (auth headers, onboarding, error envelope, split math, balances, chores/meetings mechanics, cron). The most specific source for building out routes.
-- `DEPLOY.md` — Pi deployment (systemd, Caddy, Cloudflare Tunnel, backups).
+- `DEPLOY.md` — Pi deployment via Docker Compose (Caddy, Cloudflare Tunnel, USB-SSD Postgres, R2 backups).
 
 > Current state: early scaffold. Schema + shared Zod types are mostly complete, but only the `members` route is implemented. `api/src/routes/index.ts` lists the remaining domains as TODO, and no Drizzle migrations have been generated yet.
 
@@ -31,6 +31,9 @@ pnpm db:migrate   # drizzle-kit migrate (apply migrations)
 API-only extras (run in `api/`): `pnpm db:studio` (Drizzle Studio), `pnpm start` (run built `dist/index.js`).
 
 No test runner is configured yet.
+
+### Docker (deploy + full-stack run)
+The Pi deploy is fully containerized (`docker-compose.yml`): `db`, one-shot `migrate`, `api`, `worker`, `caddy` (PWA + proxy), `cloudflared`. api + worker share the root `Dockerfile` (multi-stage `build`/`runtime`); the web/Caddy image is `web/Dockerfile`. `docker compose build && docker compose up -d`. Images must be **arm64** for the Pi. See `DEPLOY.md`.
 
 ### Local prerequisites
 - Postgres reachable at `DATABASE_URL`. Copy `.env.example` → `api/.env` (server secrets) and a web `.env` (only `VITE_*` vars are exposed to the client).

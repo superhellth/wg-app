@@ -15,3 +15,9 @@ export const createShoppingItemSchema = z.object({
   name: z.string().min(1).max(120),
 });
 export type CreateShoppingItem = z.infer<typeof createShoppingItemSchema>;
+
+/** Query for GET /api/shopping — active by default, ?history=true for bought. */
+export const shoppingQuerySchema = z.object({
+  history: z.coerce.boolean().default(false),
+});
+export type ShoppingQuery = z.infer<typeof shoppingQuerySchema>;

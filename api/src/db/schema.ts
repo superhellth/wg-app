@@ -2,6 +2,7 @@ import {
   BILLING_CYCLES,
   CHORE_FREQUENCIES,
   MEETING_MODES,
+  type PushKeys,
   RSVP_VALUES,
   SPLIT_TYPES,
 } from "@wg/shared";
@@ -45,7 +46,7 @@ export const devices = pgTable("devices", {
   currentMemberId: uuid("current_member_id").references(() => members.id),
   // unique: registration upserts on endpoint (the browser's stable sub URL)
   pushEndpoint: text("push_endpoint").notNull().unique(),
-  pushKeys: jsonb("push_keys").notNull(), // { p256dh, auth }
+  pushKeys: jsonb("push_keys").$type<PushKeys>().notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -112,7 +113,7 @@ export const chores = pgTable("chores", {
   name: text("name").notNull(),
   frequency: choreFrequencyEnum("frequency").notNull(),
   intervalDays: integer("interval_days"),
-  rotation: jsonb("rotation").notNull(), // ordered member id array
+  rotation: jsonb("rotation").$type<string[]>().notNull(), // ordered member ids
 });
 
 export const choreTurns = pgTable("chore_turns", {

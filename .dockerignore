@@ -1,0 +1,13 @@
+# keep build context small + force fresh builds
+**/node_modules
+**/dist
+.git
+.gitignore
+*.md
+docs
+DEPLOY*.md
+# never ship secrets into images
+.env
+api/.env
+web/.env
+web/.env.*

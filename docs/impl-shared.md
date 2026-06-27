@@ -45,6 +45,10 @@ Arrays: `SPLIT_TYPES`, `CHORE_FREQUENCIES`, `MEETING_MODES`, `RSVP_VALUES`,
   full-row snapshots; `*.created`/`*.deleted` carry `{ snapshot }`.
 - **`settlement.ts`** — also exports `suggestedTransferSchema` / `SuggestedTransfer`
   (output of the netting algorithm, consumed client-side).
+- **`error.ts`** — `apiErrorSchema` / `ApiError`, the `{ error: { code, message, details? } }`
+  envelope. `web/src/api.ts` parses it to throw `error.message`.
+- **`balance.ts`** — `balancesSchema` (`Record<memberId, cents>`) and
+  `balancesResponseSchema` (`{ balances, suggestedTransfers }`) for `GET /api/balances`.
 
 ## Money — split resolution (`expense.ts`)
 
@@ -64,6 +68,14 @@ lives in `shared` so the client previews splits and the server persists
 
 ## Domain notes
 
+- **wg:** `createWgSchema { name }`; `createWgResponseSchema { wg, wgToken }` (first-run
+  hands the device the shared token).
+- **invite:** `INVITE_TTL_HOURS = 24`; `inviteSchema { token, expiresAt }` (create
+  response, no request body); `inviteTokenParamSchema`; `redeemInviteResponseSchema
+  { wgToken }`.
+- **device:** `pushKeysSchema { p256dh, auth }` (also `$type`'d on the DB `push_keys`
+  column); `registerDeviceSchema { pushEndpoint, pushKeys, memberId }` (upsert by
+  endpoint); `unregisterDeviceSchema`; `deviceSchema`.
 - **expense:** no `recurring` field (feature dropped). `createExpenseSchema` carries
   optional `shoppingItemIds` for the shopping→expense bridge (server marks them
   bought atomically — see `impl-api.md`).

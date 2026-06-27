@@ -15,15 +15,15 @@
 | Forms/validation | **React Hook Form + Zod** (schemas shared with API) |
 | API | **Node + Fastify, TypeScript** |
 | DB access | **Drizzle ORM** (+ Drizzle migrations) |
-| Database | **PostgreSQL** (host-installed via apt) |
+| Database | **PostgreSQL** (`postgres:16-alpine` container; data on USB SSD) |
 | Push | **Web Push + VAPID** (server-sent), no Expo, no app stores |
 | Repo | **pnpm monorepo** — `web/` · `api/` · `shared/` |
-| Host | **Raspberry Pi 4 Model B** (dedicated) |
-| Process mgmt | **systemd** units (API + cron worker); Postgres via apt |
-| Reverse proxy | **Caddy** (serves PWA + proxies `/api`) |
-| Reachability | **Cloudflare Tunnel** (no port-forward, TLS) |
-| Secrets | **dotenv** `.env` files (gitignored, `.env.example` committed) |
-| Backups | nightly `pg_dump` → `rclone` → **Cloudflare R2** |
+| Host | **Raspberry Pi 4 (4 GB)** (dedicated) |
+| Orchestration | **Docker Compose** — `db`, `migrate`, `api`, `worker`, `caddy`, `cloudflared` |
+| Reverse proxy | **Caddy** container (serves PWA + proxies `/api`) |
+| Reachability | **Cloudflare Tunnel** container (token mode, no port-forward, TLS) |
+| Secrets | **dotenv** `.env` (compose) + `api/.env` (server); gitignored, never baked into images |
+| Backups | nightly `pg_dump` (via `docker compose exec`) → `rclone` → **Cloudflare R2** (host systemd timer) |
 
 ---
 
@@ -57,7 +57,7 @@
 - **Balances: computed on read** — `SUM(expense_shares) − settlements`; nothing materialized, so no drift when expenses are edited/deleted.
 
 ### Cron worker
-- A scheduled worker (node-cron in-process, or a separate systemd timer) for **time-based push**:
+- A scheduled worker (the separate `worker` container running node-cron) for **time-based push**:
   - Chore **overdue** check (push once, 1 day after due).
   - Meeting **reminder** (fixed 1h before each occurrence).
 - Event-driven push (chore turn started, new meeting/poll) fires inline from the relevant API mutation.
@@ -134,33 +134,24 @@ Core tables (indicative):
 
 ### OS / storage (SD-wear mitigations)
 - **Raspberry Pi OS Lite** (no desktop).
-- **PostgreSQL data directory on a USB stick/SSD** (boot stays on SD) for write-endurance.
-- **Reduce Postgres logging** (`log_statement=none`) and trim WAL settings to limit flash writes.
+- **PostgreSQL data directory on a USB stick/SSD** (boot stays on SD) for write-endurance — bind-mounted into the `db` container at `/mnt/data/pgdata`.
+- **Reduce Postgres logging** (`log_statement=none`) and trim WAL settings to limit flash writes — passed as `command:` flags to the `db` container.
 - SD/flash is treated as disposable → backups mandatory (§8).
 
-### Process management
-- **systemd** units: one for the **Fastify API**, one for the **cron worker** (or a systemd timer).
-- **Postgres** installed via apt, managed as a host service.
-- Auto-start on boot, auto-restart on crash, logs via `journalctl`.
-- (Docker considered but dropped — single-purpose Pi doesn't need container isolation; systemd is leaner.)
+### Orchestration — Docker Compose
+- The whole stack runs as containers; no host-level Node/Postgres/Caddy installs (only Docker itself + one host systemd timer for backups).
+- Services: **`db`** (postgres), **`migrate`** (one-shot `drizzle-kit migrate`, runs before api/worker), **`api`** (Fastify), **`worker`** (cron; same image as api, different entrypoint), **`caddy`** (PWA + proxy), **`cloudflared`** (tunnel).
+- `restart: unless-stopped` gives auto-start on boot + auto-restart on crash; logs via `docker compose logs`.
+- **Images are arm64** — build on the Pi or cross-build with `buildx --platform linux/arm64`.
+- **api + worker share one image** (the root `Dockerfile`, multi-stage `build`/`runtime`); the `migrate` service reuses the `build` stage (it has `drizzle-kit`).
+- (Earlier the spec favored systemd for leanness; switched to Docker Compose to collapse the manual install steps. On a 4 GB Pi the whole stack idles ~0.5–0.7 GB.)
 
-### Reverse proxy — Caddy
-- Serves the **static PWA build** and reverse-proxies `/api/*` → Fastify (`localhost:3000`).
-- Example Caddyfile:
-  ```
-  wg.example.com {
-      root * /var/www/wg-app/dist
-      file_server
-      handle /api/* {
-          reverse_proxy localhost:3000
-      }
-      try_files {path} /index.html
-  }
-  ```
-- TLS: Cloudflare Tunnel terminates public TLS; Caddy can serve plain HTTP locally behind it.
+### Reverse proxy — Caddy (container)
+- Serves the **static PWA build** (baked into the Caddy image at `/srv`) and reverse-proxies `/api/*` → `api:3000` over the compose network. See `web/Caddyfile`.
+- TLS: Cloudflare Tunnel terminates public TLS; Caddy serves plain HTTP on `:80` behind it.
 
-### Reachability — Cloudflare Tunnel
-- Outbound tunnel from Pi → public hostname, **auto-TLS**.
+### Reachability — Cloudflare Tunnel (container)
+- `cloudflared` runs in token mode; the public hostname points at `http://caddy:80` (configured in the Cloudflare dashboard).
 - **No port-forwarding, no exposed home IP, no dynamic DNS.** Survives ISP IP changes.
 
 ---
@@ -205,5 +196,5 @@ wg-app/
 - WebSockets / realtime — pull-based only for v1.
 - Offline writes / sync queue — app-shell offline only.
 - Materialized balances — computed on read.
-- Docker — systemd on a single-purpose Pi.
+- Kubernetes / multi-host orchestration — single-Pi Docker Compose is enough.
 - Multi-device-per-member secrets / account recovery — N/A under trust-based loose identity.
