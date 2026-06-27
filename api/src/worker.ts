@@ -1,4 +1,5 @@
 import cron from "node-cron";
+import { runChoreOverdue, runMeetingReminders } from "./services/reminders.js";
 
 /**
  * Cron worker — time-based push only (chore overdue, meeting reminders).
@@ -8,17 +9,21 @@ import cron from "node-cron";
 
 console.log("[worker] cron worker started");
 
+function runJob(name: string, fn: () => Promise<void>): void {
+  fn().catch((err) => console.error(`[worker] ${name} failed`, err));
+}
+
 // Meeting reminders: every 5 min, push 1h before each occurrence
 // (dedup via meetings.last_reminder_at).
-cron.schedule("*/5 * * * *", () => {
-  // TODO: implement meeting reminder dispatch
-});
+cron.schedule("*/5 * * * *", () => runJob("meeting-reminders", runMeetingReminders));
 
 // Chore overdue: hourly, push once 1 day after due
 // (now >= dueAt + 24h AND overdue_notified_at IS NULL).
-cron.schedule("0 * * * *", () => {
-  // TODO: implement overdue dispatch
-});
+cron.schedule("0 * * * *", () => runJob("chore-overdue", runChoreOverdue));
+
+// Catch up immediately on startup (dedup markers prevent double-sends).
+runJob("meeting-reminders", runMeetingReminders);
+runJob("chore-overdue", runChoreOverdue);
 
 process.on("SIGTERM", () => process.exit(0));
 process.on("SIGINT", () => process.exit(0));

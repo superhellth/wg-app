@@ -20,6 +20,9 @@ importers:
       '@wg/shared':
         specifier: workspace:*
         version: link:../shared
+      dayjs:
+        specifier: ^1.11.13
+        version: 1.11.21
       dotenv:
         specifier: ^16.4.7
         version: 16.6.1

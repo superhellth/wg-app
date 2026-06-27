@@ -179,8 +179,9 @@ No `fastify-type-provider-zod` — explicit and dependency-light.
 
 ## Cron worker — `src/worker.ts`
 
-- **Separate entrypoint / systemd unit** (matches `DEPLOY.md`), sharing `db`,
-  `services`, and `sendPushToMember`; uses `node-cron`.
+- **Separate entrypoint / `worker` compose service** (same image as `api`,
+  `command: node dist/worker.js`; see `DEPLOY.md`), sharing `db`, `services`, and
+  `sendPushToMember`; uses `node-cron`. Dispatch lives in `services/reminders.ts`.
 - **Meeting reminder** (~every 5 min): per meeting compute the next occurrence
   (fixed: `startsAt`; recurring: next `startsAt + k·recurEveryDays ≥ now`;
   unresolved poll: skip). If `occurrence − now ≤ 60min` and not yet reminded for
@@ -193,5 +194,8 @@ No `fastify-type-provider-zod` — explicit and dependency-light.
 
 Domain routers registered in `src/routes/index.ts` under `/api/<domain>`, each
 following `members.ts`: `parse()` the input, query via `db`/`schema`, wrap mutations
-+ `logActivity` in a transaction, push post-commit. Pending: wg, invites, devices,
-expenses, settlements, balances, shopping, chores, meetings, fixed-costs, activity.
++ `logActivity` in a transaction, push post-commit. **All implemented:** public `wg`
++ invite-redeem; protected members, invites, devices, expenses, settlements,
+balances, shopping, chores, meetings, fixed-costs, activity. The cron worker
+(`src/worker.ts`) dispatches via `services/reminders.ts` (`runMeetingReminders`,
+`runChoreOverdue`).

@@ -15,6 +15,7 @@
   "dependencies": {
     "@fastify/cors": "^10.0.1",
     "@wg/shared": "workspace:*",
+    "dayjs": "^1.11.13",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.38.2",
     "fastify": "^5.2.0",
