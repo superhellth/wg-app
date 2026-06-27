@@ -1,0 +1,26 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# builds
+dist/
+build/
+*.tsbuildinfo
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+
+# drizzle
+api/drizzle/meta/_journal.json.bak
+
+# os / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,22 @@
+{
+  "name": "wg-app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "packageManager": "pnpm@10.20.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel -r dev",
+    "dev:web": "pnpm --filter @wg/web dev",
+    "dev:api": "pnpm --filter @wg/api dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "db:generate": "pnpm --filter @wg/api db:generate",
+    "db:migrate": "pnpm --filter @wg/api db:migrate"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}
