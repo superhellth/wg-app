@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { uuid } from "./common.js";
+import { queryBool, uuid } from "./common.js";
 
 export const memberSchema = z.object({
   id: uuid,
@@ -27,6 +27,6 @@ export type UpdateMember = z.infer<typeof updateMemberSchema>;
 
 /** Query for GET /api/members. */
 export const memberQuerySchema = z.object({
-  includeArchived: z.coerce.boolean().default(false),
+  includeArchived: queryBool.default(false),
 });
 export type MemberQuery = z.infer<typeof memberQuerySchema>;

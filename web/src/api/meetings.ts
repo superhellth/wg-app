@@ -62,8 +62,12 @@ export const meetingsApi = {
 export function useMeetings() {
   return useQuery({ queryKey: qk.meetings, queryFn: meetingsApi.list });
 }
-export function useMeeting(id: string) {
-  return useQuery({ queryKey: qk.meeting(id), queryFn: () => meetingsApi.get(id) });
+export function useMeeting(id?: string) {
+  return useQuery({
+    queryKey: qk.meeting(id ?? ""),
+    queryFn: () => meetingsApi.get(id!),
+    enabled: !!id,
+  });
 }
 
 function useMeetingMutation<V>(fn: (v: V) => Promise<unknown>) {

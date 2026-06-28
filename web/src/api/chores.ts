@@ -1,4 +1,4 @@
-import type { Chore, ChoreTurn, CreateChore, SwapTurn } from "@wg/shared";
+import type { Chore, ChoreTurn, CreateChore, SwapTurn, UpdateChore } from "@wg/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { http } from "./client.js";
 import { qk } from "./keys.js";
@@ -12,6 +12,8 @@ export const choresApi = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+  update: (id: string, body: UpdateChore) =>
+    http<Chore>(`/api/chores/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   done: (id: string) =>
     http<ChoreTurn>(`/api/chores/${id}/done`, { method: "POST" }),
   skip: (id: string) =>
@@ -23,6 +25,7 @@ export const choresApi = {
     }),
   remind: (id: string) =>
     http<void>(`/api/chores/${id}/remind`, { method: "POST" }),
+  remove: (id: string) => http<void>(`/api/chores/${id}`, { method: "DELETE" }),
 };
 
 export function useChores() {
@@ -41,6 +44,10 @@ function useChoreMutation<V>(fn: (v: V) => Promise<unknown>) {
 }
 
 export const useCreateChore = () => useChoreMutation(choresApi.create);
+export const useUpdateChore = () =>
+  useChoreMutation(({ id, body }: { id: string; body: UpdateChore }) =>
+    choresApi.update(id, body),
+  );
 export const useChoreDone = () => useChoreMutation(choresApi.done);
 export const useChoreSkip = () => useChoreMutation(choresApi.skip);
 export const useChoreSwap = () =>
@@ -48,3 +55,4 @@ export const useChoreSwap = () =>
     choresApi.swap(id, body),
   );
 export const useChoreRemind = () => useChoreMutation(choresApi.remind);
+export const useDeleteChore = () => useChoreMutation(choresApi.remove);

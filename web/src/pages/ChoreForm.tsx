@@ -14,9 +14,14 @@ import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import type { ChoreFrequency } from "@wg/shared";
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useCreateChore } from "../api/chores.js";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  useChores,
+  useCreateChore,
+  useDeleteChore,
+  useUpdateChore,
+} from "../api/chores.js";
 import { useMembers } from "../api/members.js";
 import { MemberAvatar } from "../components/MemberAvatar.js";
 import { SectionLabel } from "../components/SectionLabel.js";
@@ -29,8 +34,14 @@ const FREQS: { value: ChoreFrequency; label: string }[] = [
 
 export function ChoreForm() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const editing = Boolean(id);
   const { data: members } = useMembers();
   const create = useCreateChore();
+  const update = useUpdateChore();
+  const remove = useDeleteChore();
+  const chores = useChores();
+  const existing = editing ? chores.data?.find((c) => c.id === id) : undefined;
 
   const [name, setName] = useState("");
   const [frequency, setFrequency] = useState<ChoreFrequency>("weekly");
@@ -38,15 +49,25 @@ export function ChoreForm() {
   const [rotation, setRotation] = useState<string[]>([]);
   const [firstAssignee, setFirstAssignee] = useState("");
 
-  // seed rotation with all active members in roster order
+  // Seed once: from the existing chore when editing, else all active members.
+  const seeded = useRef(false);
   useEffect(() => {
-    if (members && rotation.length === 0) {
+    if (seeded.current) return;
+    if (editing) {
+      if (!existing) return;
+      setName(existing.name);
+      setFrequency(existing.frequency);
+      setIntervalDays(String(existing.intervalDays ?? 10));
+      setRotation(existing.rotation);
+      seeded.current = true;
+    } else if (members) {
       const ids = members.map((m) => m.id);
       setRotation(ids);
       setFirstAssignee(ids[0] ?? "");
+      seeded.current = true;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [members]);
+  }, [editing, existing, members]);
 
   const nameById = useMemo(
     () => new Map((members ?? []).map((m) => [m.id, m.displayName])),
@@ -73,25 +94,33 @@ export function ChoreForm() {
     .map((m) => m.id)
     .filter((id) => !rotation.includes(id));
 
+  const busy = create.isPending || update.isPending || remove.isPending;
   const valid =
     name.trim() &&
     rotation.length > 0 &&
-    firstAssignee &&
-    rotation.includes(firstAssignee) &&
+    (editing || (firstAssignee && rotation.includes(firstAssignee))) &&
     (frequency !== "custom" || Number(intervalDays) > 0) &&
-    !create.isPending;
+    !busy;
 
   const submit = () => {
-    create.mutate(
-      {
-        name: name.trim(),
-        frequency,
-        ...(frequency === "custom" ? { intervalDays: Number(intervalDays) } : {}),
-        rotation,
-        firstAssigneeId: firstAssignee,
-      },
-      { onSuccess: () => navigate("/putzplan", { replace: true }) },
-    );
+    const base = {
+      name: name.trim(),
+      frequency,
+      ...(frequency === "custom" ? { intervalDays: Number(intervalDays) } : {}),
+      rotation,
+    };
+    const onSuccess = () => navigate("/putzplan", { replace: true });
+    if (editing && id) {
+      update.mutate({ id, body: base }, { onSuccess });
+    } else {
+      create.mutate({ ...base, firstAssigneeId: firstAssignee }, { onSuccess });
+    }
+  };
+
+  const handleDelete = () => {
+    if (!id) return;
+    if (!window.confirm("Diese Aufgabe wirklich löschen?")) return;
+    remove.mutate(id, { onSuccess: () => navigate("/putzplan", { replace: true }) });
   };
 
   return (
@@ -100,7 +129,9 @@ export function ChoreForm() {
         <IconButton edge="start" onClick={() => navigate(-1)}>
           <ArrowBackRoundedIcon />
         </IconButton>
-        <Typography variant="h5">Neue Aufgabe</Typography>
+        <Typography variant="h5">
+          {editing ? "Aufgabe bearbeiten" : "Neue Aufgabe"}
+        </Typography>
       </Stack>
 
       <Stack spacing={2.5}>
@@ -165,22 +196,29 @@ export function ChoreForm() {
           </Card>
         </Box>
 
-        <TextField
-          select
-          label="Erste:r dran"
-          value={firstAssignee}
-          onChange={(e) => setFirstAssignee(e.target.value)}
-          fullWidth
-        >
-          {rotation.map((id) => (
-            <MenuItem key={id} value={id}>{nameById.get(id)}</MenuItem>
-          ))}
-        </TextField>
+        {!editing && (
+          <TextField
+            select
+            label="Erste:r dran"
+            value={firstAssignee}
+            onChange={(e) => setFirstAssignee(e.target.value)}
+            fullWidth
+          >
+            {rotation.map((id) => (
+              <MenuItem key={id} value={id}>{nameById.get(id)}</MenuItem>
+            ))}
+          </TextField>
+        )}
 
         <Divider />
         <Button variant="contained" size="large" disabled={!valid} onClick={submit}>
-          {create.isPending ? "Wird erstellt…" : "Aufgabe erstellen"}
+          {busy ? "Wird gespeichert…" : editing ? "Änderungen speichern" : "Aufgabe erstellen"}
         </Button>
+        {editing && (
+          <Button color="error" disabled={busy} onClick={handleDelete}>
+            Aufgabe löschen
+          </Button>
+        )}
       </Stack>
     </Box>
   );

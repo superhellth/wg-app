@@ -33,6 +33,11 @@ export function formatDateTime(iso: string): string {
   return dayjs(iso).format("dd, DD.MM. HH:mm");
 }
 
+/** cents → "14,50" plain editable string (no currency symbol), for form prefill. */
+export function centsToInput(cents: number): string {
+  return (cents / 100).toFixed(2).replace(".", ",");
+}
+
 /** "14,50" string → cents (int). Accepts comma or dot. Returns null if invalid. */
 export function parseEurToCents(input: string): number | null {
   const normalized = input.trim().replace(/\s/g, "").replace(",", ".");

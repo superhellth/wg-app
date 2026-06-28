@@ -110,7 +110,11 @@ export function Geld() {
           {expenses.data && expenses.data.length > 0 ? (
             <Stack spacing={1}>
               {expenses.data.map((e) => (
-                <Card key={e.id} sx={{ p: 1.75 }}>
+                <Card
+                  key={e.id}
+                  sx={{ p: 1.75, cursor: "pointer" }}
+                  onClick={() => navigate(`/geld/${e.id}/bearbeiten`)}
+                >
                   <Stack direction="row" alignItems="center" spacing={1.5}>
                     <MemberAvatar memberId={e.payerId} size={36} />
                     <Box sx={{ flex: 1, minWidth: 0 }}>

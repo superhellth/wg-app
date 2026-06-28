@@ -1,0 +1,1 @@
+ALTER TABLE "expense_shares" ADD COLUMN "input_value" double precision;

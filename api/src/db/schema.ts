@@ -7,6 +7,7 @@ import {
   SPLIT_TYPES,
 } from "@wg/shared";
 import {
+  doublePrecision,
   integer,
   jsonb,
   pgEnum,
@@ -78,6 +79,10 @@ export const expenseShares = pgTable("expense_shares", {
   memberId: uuid("member_id").references(() => members.id).notNull(),
   // owed cents for this member (resolved from splitType at write time)
   amount: integer("amount").notNull(),
+  // raw per-member input that produced `amount`, kept ONLY so an edit form can
+  // reconstruct the original split faithfully (exact=cents, shares=count,
+  // percent=points; null for equal). NOT authoritative — `amount` drives balances.
+  inputValue: doublePrecision("input_value"),
 });
 
 export const settlements = pgTable("settlements", {

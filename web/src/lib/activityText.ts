@@ -40,6 +40,10 @@ export function activityText(a: Activity): string {
       return "hat eingekauft";
     case "chore.created":
       return `hat die Aufgabe „${d?.snapshot?.chore?.name ?? ""}" erstellt`;
+    case "chore.updated":
+      return `hat die Aufgabe „${d?.after?.name ?? ""}" bearbeitet`;
+    case "chore.deleted":
+      return `hat die Aufgabe „${d?.snapshot?.name ?? ""}" gelöscht`;
     case "chore.done":
       return "hat eine Aufgabe erledigt";
     case "chore.swapped":

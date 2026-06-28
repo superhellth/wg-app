@@ -1,7 +1,9 @@
 import {
   createExpenseSchema,
+  type ExpenseShare,
   idParamSchema,
   resolveShares,
+  type SplitType,
   updateExpenseSchema,
 } from "@wg/shared";
 import { desc, eq, inArray } from "drizzle-orm";
@@ -11,6 +13,17 @@ import { logActivity } from "../lib/activity.js";
 import { NotFoundError } from "../lib/errors.js";
 import { parse } from "../lib/parse.js";
 import { requireMember } from "../plugins/auth.js";
+
+/**
+ * Map memberId → the raw split input we persist for faithful edit prefill.
+ * `equal` carries no per-member input, so nothing is stored.
+ */
+function shareInput(type: SplitType, shares: ExpenseShare[]): Map<string, number> {
+  const m = new Map<string, number>();
+  if (type === "equal") return m;
+  for (const s of shares) m.set(s.memberId, s.value);
+  return m;
+}
 
 export async function expensesRoutes(app: FastifyInstance) {
   app.get("/", async () =>
@@ -35,6 +48,7 @@ export async function expensesRoutes(app: FastifyInstance) {
     const actor = requireMember(req);
     const body = parse(createExpenseSchema, req.body);
     const resolved = resolveShares(body.amount, body.splitType, body.shares);
+    const rawInput = shareInput(body.splitType, body.shares);
 
     const created = await db.transaction(async (tx) => {
       const [expense] = await tx
@@ -52,6 +66,7 @@ export async function expensesRoutes(app: FastifyInstance) {
           expenseId: expense!.id,
           memberId: r.memberId,
           amount: r.amount,
+          inputValue: rawInput.get(r.memberId) ?? null,
         })),
       );
 
@@ -84,6 +99,7 @@ export async function expensesRoutes(app: FastifyInstance) {
     const { id } = parse(idParamSchema, req.params);
     const body = parse(updateExpenseSchema, req.body);
     const resolved = resolveShares(body.amount, body.splitType, body.shares);
+    const rawInput = shareInput(body.splitType, body.shares);
 
     return db.transaction(async (tx) => {
       const [before] = await tx
@@ -111,7 +127,12 @@ export async function expensesRoutes(app: FastifyInstance) {
         .delete(schema.expenseShares)
         .where(eq(schema.expenseShares.expenseId, id));
       await tx.insert(schema.expenseShares).values(
-        resolved.map((r) => ({ expenseId: id, memberId: r.memberId, amount: r.amount })),
+        resolved.map((r) => ({
+          expenseId: id,
+          memberId: r.memberId,
+          amount: r.amount,
+          inputValue: rawInput.get(r.memberId) ?? null,
+        })),
       );
 
       await logActivity(tx, {

@@ -13,15 +13,20 @@ import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import { resolveShares, type SplitType } from "@wg/shared";
-import { useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useIdentity } from "../api/identity.js";
-import { useCreateExpense } from "../api/expenses.js";
+import {
+  useCreateExpense,
+  useDeleteExpense,
+  useExpense,
+  useUpdateExpense,
+} from "../api/expenses.js";
 import { useMembers } from "../api/members.js";
 import { MemberAvatar } from "../components/MemberAvatar.js";
 import { MoneyText } from "../components/MoneyText.js";
 import { SectionLabel } from "../components/SectionLabel.js";
-import { parseEurToCents } from "../lib/format.js";
+import { centsToInput, parseEurToCents } from "../lib/format.js";
 
 const CATEGORIES = ["Lebensmittel", "Haushalt", "Miete", "Freizeit", "Sonstiges"];
 const SPLITS: { value: SplitType; label: string }[] = [
@@ -33,10 +38,15 @@ const SPLITS: { value: SplitType; label: string }[] = [
 
 export function ExpenseForm() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const editing = Boolean(id);
   const [params] = useSearchParams();
   const { memberId } = useIdentity();
   const { data: members } = useMembers();
   const create = useCreateExpense();
+  const update = useUpdateExpense();
+  const remove = useDeleteExpense();
+  const detail = useExpense(id);
 
   const shoppingItemIds = useMemo(() => {
     const raw = params.get("items");
@@ -51,15 +61,36 @@ export function ExpenseForm() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [values, setValues] = useState<Record<string, string>>({});
 
-  // default payer + all-active participants once members load
   const active = members ?? [];
-  useMemo(() => {
-    if (active.length && selected.size === 0) {
+
+  // Seed once: from the loaded expense when editing, else default to all
+  // active members as participants + self as payer.
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (seeded.current) return;
+    if (editing) {
+      const d = detail.data;
+      if (!d) return;
+      setDescription(d.description);
+      setAmountStr(centsToInput(d.amount));
+      setPayerId(d.payerId);
+      setCategory(d.category ?? "");
+      setSplitType(d.splitType);
+      setSelected(new Set(d.shares.map((s) => s.memberId)));
+      const v: Record<string, string> = {};
+      for (const s of d.shares) {
+        if (d.splitType === "exact") v[s.memberId] = centsToInput(s.inputValue ?? s.amount);
+        else if (s.inputValue != null) v[s.memberId] = String(s.inputValue);
+      }
+      setValues(v);
+      seeded.current = true;
+    } else if (active.length) {
       setSelected(new Set(active.map((m) => m.id)));
       if (!payerId && memberId) setPayerId(memberId);
+      seeded.current = true;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [members]);
+  }, [editing, detail.data, members]);
 
   const amount = parseEurToCents(amountStr) ?? 0;
   const participants = active.filter((m) => selected.has(m.id));
@@ -78,6 +109,7 @@ export function ExpenseForm() {
       ? safeResolve(amount, splitType, shares)
       : [];
 
+  const busy = create.isPending || update.isPending || remove.isPending;
   const splitError = validateSplit(splitType, amount, shares);
   const canSubmit =
     description.trim().length > 0 &&
@@ -85,7 +117,7 @@ export function ExpenseForm() {
     payerId &&
     participants.length > 0 &&
     !splitError &&
-    !create.isPending;
+    !busy;
 
   const toggle = (id: string) => {
     setSelected((prev) => {
@@ -96,18 +128,29 @@ export function ExpenseForm() {
   };
 
   const submit = () => {
-    create.mutate(
-      {
-        payerId,
-        amount,
-        description: description.trim(),
-        category: category || undefined,
-        splitType,
-        shares,
-        ...(shoppingItemIds.length ? { shoppingItemIds } : {}),
-      },
-      { onSuccess: () => navigate("/geld", { replace: true }) },
-    );
+    const body = {
+      payerId,
+      amount,
+      description: description.trim(),
+      category: category || undefined,
+      splitType,
+      shares,
+    };
+    const onSuccess = () => navigate("/geld", { replace: true });
+    if (editing && id) {
+      update.mutate({ id, body }, { onSuccess });
+    } else {
+      create.mutate(
+        { ...body, ...(shoppingItemIds.length ? { shoppingItemIds } : {}) },
+        { onSuccess },
+      );
+    }
+  };
+
+  const handleDelete = () => {
+    if (!id) return;
+    if (!window.confirm("Diese Ausgabe wirklich löschen?")) return;
+    remove.mutate(id, { onSuccess: () => navigate("/geld", { replace: true }) });
   };
 
   return (
@@ -116,7 +159,9 @@ export function ExpenseForm() {
         <IconButton edge="start" onClick={() => navigate(-1)}>
           <ArrowBackRoundedIcon />
         </IconButton>
-        <Typography variant="h5">Neue Ausgabe</Typography>
+        <Typography variant="h5">
+          {editing ? "Ausgabe bearbeiten" : "Neue Ausgabe"}
+        </Typography>
       </Stack>
 
       <Stack spacing={2.5}>
@@ -250,12 +295,19 @@ export function ExpenseForm() {
         )}
 
         {splitError && <Alert severity="warning">{splitError}</Alert>}
-        {create.isError && <Alert severity="error">Konnte nicht gespeichert werden.</Alert>}
+        {(create.isError || update.isError) && (
+          <Alert severity="error">Konnte nicht gespeichert werden.</Alert>
+        )}
 
         <Divider />
         <Button variant="contained" size="large" disabled={!canSubmit} onClick={submit}>
-          {create.isPending ? "Wird gespeichert…" : "Ausgabe speichern"}
+          {busy ? "Wird gespeichert…" : "Ausgabe speichern"}
         </Button>
+        {editing && (
+          <Button color="error" disabled={busy} onClick={handleDelete}>
+            Ausgabe löschen
+          </Button>
+        )}
       </Stack>
     </Box>
   );

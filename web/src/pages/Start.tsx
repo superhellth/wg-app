@@ -11,7 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { useIdentity } from "../api/identity.js";
 import { useBalances } from "../api/balances.js";
 import { useChores, useChoreDone } from "../api/chores.js";
-import { useMeetings, useRsvp } from "../api/meetings.js";
+import { useMeeting, useMeetings, useRsvp } from "../api/meetings.js";
 import { useMembersMap } from "../api/members.js";
 import { useRecentActivity } from "../api/activity.js";
 import { ActivityRow } from "../components/ActivityRow.js";
@@ -37,6 +37,12 @@ export function Start() {
   const nextMeeting = (meetings.data ?? [])
     .filter((m) => m.startsAt && dayjs(m.startsAt).isAfter(dayjs()))
     .sort((a, b) => dayjs(a.startsAt!).valueOf() - dayjs(b.startsAt!).valueOf())[0];
+
+  // Pull the next meeting's detail so the Ja/Nein buttons reflect my current RSVP
+  // (the meetings list carries no rsvps). The rsvp mutation invalidates the
+  // meetings key by prefix, so this refetches and restyles on change.
+  const nextDetail = useMeeting(nextMeeting?.id);
+  const myRsvp = nextDetail.data?.rsvps.find((r) => r.memberId === memberId)?.value;
 
   return (
     <Stack spacing={2.5} sx={{ p: 2 }}>
@@ -102,13 +108,14 @@ export function Start() {
           <Stack direction="row" spacing={1}>
             <Button
               size="small"
-              variant="outlined"
+              variant={myRsvp === "yes" ? "contained" : "outlined"}
               onClick={() => rsvp.mutate({ id: nextMeeting.id, body: { value: "yes" } })}
             >
               Ja
             </Button>
             <Button
               size="small"
+              variant={myRsvp === "no" ? "contained" : "outlined"}
               color="inherit"
               onClick={() => rsvp.mutate({ id: nextMeeting.id, body: { value: "no" } })}
             >

@@ -2,11 +2,17 @@ import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
 import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
+import List from "@mui/material/List";
+import ListItemButton from "@mui/material/ListItemButton";
+import ListItemText from "@mui/material/ListItemText";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import dayjs from "dayjs";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useIdentity } from "../api/identity.js";
 import {
@@ -29,6 +35,7 @@ export function MeetingDetail() {
   const unvote = useUnvote();
   const resolve = useResolvePoll();
   const rsvp = useRsvp();
+  const [resolveOpen, setResolveOpen] = useState(false);
 
   if (!detail.data) return <Box sx={{ p: 2 }}>Lädt…</Box>;
   const { meeting, options, votes, rsvps } = detail.data;
@@ -83,39 +90,72 @@ export function MeetingDetail() {
                     >
                       {mine ? "Gewählt" : "Wählen"}
                     </Button>
-                    <Button
-                      size="small"
-                      color="success"
-                      onClick={() => resolve.mutate({ id, body: { optionId: o.id } })}
-                    >
-                      Auflösen
-                    </Button>
                   </Stack>
                 </Card>
               );
             })}
           </Stack>
+          <Button
+            variant="contained"
+            color="success"
+            fullWidth
+            sx={{ mt: 2 }}
+            onClick={() => setResolveOpen(true)}
+          >
+            Zeit festlegen
+          </Button>
           <Divider sx={{ my: 3 }} />
         </Box>
       )}
 
-      {/* RSVP */}
+      {/* Resolve dialog: pick the winning option → meeting gets a fixed time. */}
+      <Dialog open={resolveOpen} onClose={() => setResolveOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>Zeit festlegen</DialogTitle>
+        <List>
+          {options.map((o) => (
+            <ListItemButton
+              key={o.id}
+              onClick={() =>
+                resolve.mutate(
+                  { id, body: { optionId: o.id } },
+                  { onSuccess: () => setResolveOpen(false) },
+                )
+              }
+            >
+              <ListItemText
+                primary={formatDateTime(o.optionTime)}
+                secondary={`${votesByOption(o.id).length} Stimme${
+                  votesByOption(o.id).length === 1 ? "" : "n"
+                }`}
+              />
+            </ListItemButton>
+          ))}
+        </List>
+      </Dialog>
+
+      {/* RSVP — only once the time is fixed (no point committing to a poll). */}
       <SectionLabel>Bist du dabei?</SectionLabel>
-      <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-        <Button
-          variant={myRsvp === "yes" ? "contained" : "outlined"}
-          onClick={() => rsvp.mutate({ id, body: { value: "yes" } })}
-        >
-          Ja
-        </Button>
-        <Button
-          variant={myRsvp === "no" ? "contained" : "outlined"}
-          color="inherit"
-          onClick={() => rsvp.mutate({ id, body: { value: "no" } })}
-        >
-          Nein
-        </Button>
-      </Stack>
+      {isPoll ? (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Zusagen sind möglich, sobald die Zeit festgelegt ist.
+        </Typography>
+      ) : (
+        <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+          <Button
+            variant={myRsvp === "yes" ? "contained" : "outlined"}
+            onClick={() => rsvp.mutate({ id, body: { value: "yes" } })}
+          >
+            Ja
+          </Button>
+          <Button
+            variant={myRsvp === "no" ? "contained" : "outlined"}
+            color="inherit"
+            onClick={() => rsvp.mutate({ id, body: { value: "no" } })}
+          >
+            Nein
+          </Button>
+        </Stack>
+      )}
 
       <SectionLabel>Zusagen ({attendees.length})</SectionLabel>
       {attendees.length > 0 ? (

@@ -44,7 +44,7 @@ export function Fixkosten() {
   return (
     <Box sx={{ p: 2 }}>
       <Alert severity="info" sx={{ mb: 2 }}>
-        Reine Übersicht — nicht mit dem Geld-Konto verbunden.
+        Reine Übersicht — nicht mit dem Geld-Tab verbunden.
       </Alert>
 
       {costs.data && costs.data.length > 0 ? (

@@ -94,6 +94,14 @@ export function Putzplan() {
       <Menu anchorEl={menu?.el} open={Boolean(menu)} onClose={() => setMenu(null)}>
         <MenuItem
           onClick={() => {
+            if (menu) navigate(`/putzplan/${menu.chore.id}/bearbeiten`);
+            setMenu(null);
+          }}
+        >
+          Bearbeiten
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
             if (menu) setSwapFor(menu.chore);
             setMenu(null);
           }}

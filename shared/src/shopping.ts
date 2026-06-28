@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { uuid } from "./common.js";
+import { queryBool, uuid } from "./common.js";
 
 /** One shared list, name-only items. Bought items move to history. */
 export const shoppingItemSchema = z.object({
@@ -18,6 +18,6 @@ export type CreateShoppingItem = z.infer<typeof createShoppingItemSchema>;
 
 /** Query for GET /api/shopping — active by default, ?history=true for bought. */
 export const shoppingQuerySchema = z.object({
-  history: z.coerce.boolean().default(false),
+  history: queryBool.default(false),
 });
 export type ShoppingQuery = z.infer<typeof shoppingQuerySchema>;

@@ -22,6 +22,8 @@ export const ACTIVITY_KINDS = [
   "shopping.added",
   "shopping.bought",
   "chore.created",
+  "chore.updated",
+  "chore.deleted",
   "chore.done",
   "chore.swapped",
   "chore.skipped",

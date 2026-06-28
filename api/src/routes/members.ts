@@ -4,7 +4,7 @@ import {
   memberQuerySchema,
   updateMemberSchema,
 } from "@wg/shared";
-import { asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db/client.js";
 import { logActivity } from "../lib/activity.js";
@@ -98,8 +98,53 @@ export async function membersRoutes(app: FastifyInstance) {
         .set({ archivedAt: new Date() })
         .where(eq(schema.members.id, id))
         .returning();
-      // TODO(chores): auto-skip this member's open chore turns once the chore
-      // service exists, so rotations don't stall on an archived member.
+
+      // Drop the archived member from every chore rotation and repair any open
+      // turn, so rotations don't stall on someone who's gone.
+      const allChores = await tx.select().from(schema.chores);
+      for (const chore of allChores) {
+        if (!chore.rotation.includes(id)) continue;
+        const rotation = chore.rotation.filter((mid) => mid !== id);
+        await tx
+          .update(schema.chores)
+          .set({ rotation })
+          .where(eq(schema.chores.id, chore.id));
+
+        const [turn] = await tx
+          .select()
+          .from(schema.choreTurns)
+          .where(
+            and(
+              eq(schema.choreTurns.choreId, chore.id),
+              isNull(schema.choreTurns.completedAt),
+              isNull(schema.choreTurns.skippedAt),
+            ),
+          );
+        if (!turn) continue;
+        if (rotation.length === 0) {
+          // no one left to do this chore — close the open turn
+          await tx
+            .update(schema.choreTurns)
+            .set({ skippedAt: new Date() })
+            .where(eq(schema.choreTurns.id, turn.id));
+          continue;
+        }
+        const idx = rotation.indexOf(turn.assigneeId);
+        const repaired =
+          idx === -1
+            ? { assigneeId: rotation[0]!, rotationIndex: 0 }
+            : { assigneeId: turn.assigneeId, rotationIndex: idx };
+        if (
+          repaired.assigneeId !== turn.assigneeId ||
+          repaired.rotationIndex !== turn.rotationIndex
+        ) {
+          await tx
+            .update(schema.choreTurns)
+            .set(repaired)
+            .where(eq(schema.choreTurns.id, turn.id));
+        }
+      }
+
       await logActivity(tx, {
         memberId: actor.id,
         kind: "member.archived",

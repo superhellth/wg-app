@@ -5,14 +5,19 @@ import { choreFrequency, type ChoreFrequency } from "./enums.js";
 export { choreFrequency };
 export type { ChoreFrequency };
 
+/** Shared shape of a chore definition (no turn/assignment fields). */
+const choreBaseShape = {
+  name: z.string().min(1).max(120),
+  frequency: choreFrequency,
+  /** for "custom": interval length in days */
+  intervalDays: z.number().int().positive().optional(),
+  /** rotation order — member ids in turn order */
+  rotation: z.array(uuid).min(1),
+} as const;
+
 export const createChoreSchema = z
   .object({
-    name: z.string().min(1).max(120),
-    frequency: choreFrequency,
-    /** for "custom": interval length in days */
-    intervalDays: z.number().int().positive().optional(),
-    /** rotation order — member ids in turn order */
-    rotation: z.array(uuid).min(1),
+    ...choreBaseShape,
     /** first turn's assignee; must be in `rotation`. defaults to rotation[0]. */
     firstAssigneeId: uuid.optional(),
   })
@@ -25,6 +30,20 @@ export const createChoreSchema = z
     }
   });
 export type CreateChore = z.infer<typeof createChoreSchema>;
+
+/**
+ * PATCH body for a chore definition — name/frequency/rotation only. The active
+ * turn isn't reassigned here (the server repairs it if rotation changes); use
+ * the swap endpoint to change who's currently up.
+ */
+export const updateChoreSchema = z
+  .object(choreBaseShape)
+  .superRefine((v, ctx) => {
+    if (v.frequency === "custom" && v.intervalDays == null) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "custom frequency requires intervalDays", path: ["intervalDays"] });
+    }
+  });
+export type UpdateChore = z.infer<typeof updateChoreSchema>;
 
 export const choreSchema = z.object({
   id: uuid,

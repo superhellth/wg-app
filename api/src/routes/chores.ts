@@ -1,4 +1,9 @@
-import { createChoreSchema, idParamSchema, swapTurnSchema } from "@wg/shared";
+import {
+  createChoreSchema,
+  idParamSchema,
+  swapTurnSchema,
+  updateChoreSchema,
+} from "@wg/shared";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db/client.js";
@@ -111,6 +116,86 @@ export async function choresRoutes(app: FastifyInstance) {
 
     void sendPushToMember(firstAssignee, turnStartedPush(result.chore.name));
     return reply.status(201).send(result);
+  });
+
+  // Edit a chore definition (name/frequency/interval/rotation). Does not touch
+  // turn completion; if the rotation changes, repair the active turn so its
+  // rotationIndex stays in range and points at its assignee.
+  app.patch("/:id", async (req) => {
+    const actor = requireMember(req);
+    const { id } = parse(idParamSchema, req.params);
+    const body = parse(updateChoreSchema, req.body);
+
+    return db.transaction(async (tx) => {
+      const [before] = await tx
+        .select()
+        .from(schema.chores)
+        .where(eq(schema.chores.id, id));
+      if (!before) throw new NotFoundError("chore not found");
+
+      const [after] = await tx
+        .update(schema.chores)
+        .set({
+          name: body.name,
+          frequency: body.frequency,
+          intervalDays: body.intervalDays ?? null,
+          rotation: body.rotation,
+        })
+        .where(eq(schema.chores.id, id))
+        .returning();
+
+      // Keep the open turn consistent with the new rotation.
+      const [current] = await tx
+        .select()
+        .from(schema.choreTurns)
+        .where(activeTurnWhere(id));
+      if (current) {
+        const idx = body.rotation.indexOf(current.assigneeId);
+        const repaired =
+          idx === -1
+            ? { assigneeId: body.rotation[0]!, rotationIndex: 0 }
+            : { assigneeId: current.assigneeId, rotationIndex: idx };
+        if (
+          repaired.assigneeId !== current.assigneeId ||
+          repaired.rotationIndex !== current.rotationIndex
+        ) {
+          await tx
+            .update(schema.choreTurns)
+            .set(repaired)
+            .where(eq(schema.choreTurns.id, current.id));
+        }
+      }
+
+      await logActivity(tx, {
+        memberId: actor.id,
+        kind: "chore.updated",
+        data: { before, after },
+      });
+      return after!;
+    });
+  });
+
+  // Hard-delete a chore and all its turns (it's config, not a money record).
+  app.delete("/:id", async (req, reply) => {
+    const actor = requireMember(req);
+    const { id } = parse(idParamSchema, req.params);
+    await db.transaction(async (tx) => {
+      const [before] = await tx
+        .select()
+        .from(schema.chores)
+        .where(eq(schema.chores.id, id));
+      if (!before) throw new NotFoundError("chore not found");
+
+      await tx.delete(schema.choreTurns).where(eq(schema.choreTurns.choreId, id));
+      await tx.delete(schema.chores).where(eq(schema.chores.id, id));
+
+      await logActivity(tx, {
+        memberId: actor.id,
+        kind: "chore.deleted",
+        data: { snapshot: before },
+      });
+    });
+    return reply.status(204).send();
   });
 
   // Mark the current turn done → advance to the next assignee.

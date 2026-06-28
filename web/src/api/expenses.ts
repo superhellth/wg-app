@@ -8,6 +8,8 @@ export interface ExpenseShareRow {
   expenseId: string;
   memberId: string;
   amount: number;
+  /** raw split input (exact=cents, shares=count, percent=points; null=equal) */
+  inputValue: number | null;
 }
 export type ExpenseDetail = Expense & { shares: ExpenseShareRow[] };
 
@@ -28,8 +30,12 @@ export const expensesApi = {
 export function useExpenses() {
   return useQuery({ queryKey: qk.expenses, queryFn: expensesApi.list });
 }
-export function useExpense(id: string) {
-  return useQuery({ queryKey: qk.expense(id), queryFn: () => expensesApi.get(id) });
+export function useExpense(id?: string) {
+  return useQuery({
+    queryKey: qk.expense(id ?? ""),
+    queryFn: () => expensesApi.get(id!),
+    enabled: !!id,
+  });
 }
 
 function useExpenseMutation<V>(fn: (v: V) => Promise<unknown>) {
