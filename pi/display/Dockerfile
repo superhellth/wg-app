@@ -2,9 +2,9 @@
 # RPi.GPIO compiles from source on arm, so build tools + headers are needed.
 FROM python:3.11-slim
 
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends build-essential python3-dev \
-  && rm -rf /var/lib/apt/lists/*
+RUN apt-get update
+RUN apt-get install -y --no-install-recommends build-essential python3-dev
+RUN rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY requirements.txt .
