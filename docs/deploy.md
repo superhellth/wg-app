@@ -49,7 +49,7 @@ lsblk                         # find the device, e.g. /dev/sda
 sudo mkfs.ext4 /dev/sda1      # ⚠️ erases it — pick the right device
 sudo mkdir -p /mnt/data
 sudo blkid /dev/sda1          # copy UUID=...
-echo 'UUID=<your-uuid>  /mnt/data  ext4  defaults,noatime  0  2' | sudo tee -a /etc/fstab
+echo 'UUID=<your-uuid>  /mnt/data  ext4  defaults,noatime,nofail,x-systemd.device-timeout=10  0  2' | sudo tee -a /etc/fstab
 sudo mount -a
 sudo mkdir -p /mnt/data/pgdata /mnt/data/backups
 ```

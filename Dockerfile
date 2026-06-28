@@ -18,7 +18,7 @@ COPY shared/ shared/
 COPY api/ api/
 RUN pnpm --filter @wg/shared build \
   && pnpm --filter @wg/api build \
-  && pnpm --filter @wg/api deploy --prod /app
+  && pnpm --filter @wg/api deploy --prod --legacy /app
 
 # ── runtime: only the deployable (no dev deps, no symlinks) ──
 FROM node:20-alpine AS runtime
