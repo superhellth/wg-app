@@ -18,7 +18,7 @@ export type DisplayFunction = z.infer<typeof displayFunction>;
 /** German labels for the settings UI. */
 export const DISPLAY_FUNCTION_LABELS: Record<DisplayFunction, string> = {
   shopping: "Einkaufsliste",
-  chores: "Putzplan (wer dran ist)",
+  chores: "Putzplan",
   saldo: "Geld-Saldo",
   appointment: "Nächster Termin",
   activity: "Letzte Aktivitäten",

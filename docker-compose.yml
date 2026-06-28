@@ -96,6 +96,7 @@ services:
     privileged: true
     devices:
       - /dev/gpiomem:/dev/gpiomem
+      - /dev/gpiochip0:/dev/gpiochip0 # lgpio edge detection
       - /dev/i2c-1:/dev/i2c-1
     depends_on:
       - api

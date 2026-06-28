@@ -217,7 +217,7 @@ export function ExpenseForm() {
         </Box>
 
         <Box>
-          <SectionLabel>Teilnehmer</SectionLabel>
+          <SectionLabel>Bezahlt für</SectionLabel>
           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
             {active.map((m) => (
               <Chip
@@ -225,6 +225,7 @@ export function ExpenseForm() {
                 avatar={<MemberAvatar memberId={m.id} size={24} />}
                 label={m.displayName}
                 variant={selected.has(m.id) ? "filled" : "outlined"}
+                color={selected.has(m.id) ? "primary" : "default"}
                 onClick={() => toggle(m.id)}
               />
             ))}

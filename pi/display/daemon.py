@@ -22,6 +22,12 @@ Env:
 import os
 import time
 
+# gpiozero's default RPi.GPIO backend fails edge detection on recent Pi OS
+# (Bookworm) and inside containers ("Failed to add edge detection"). The lgpio
+# backend uses the gpiochip char device and works on Pi 4/5. Must be set before
+# importing gpiozero.
+os.environ.setdefault("GPIOZERO_PIN_FACTORY", "lgpio")
+
 import requests
 from gpiozero import Button
 from RPLCD.i2c import CharLCD
@@ -38,6 +44,8 @@ PAGE_SECONDS = float(os.environ.get("PAGE_SECONDS", "3"))
 # How often to retry the LCD after an I2C error (e.g. breadboard power switched
 # off). The daemon stays alive and re-inits the display when power returns.
 LCD_RETRY_SECONDS = float(os.environ.get("LCD_RETRY_SECONDS", "5"))
+# How long to flash "Taste nicht belegt" when an unmapped button is pressed.
+FLASH_SECONDS = float(os.environ.get("FLASH_SECONDS", "1.5"))
 
 # Fixed wiring: color -> BCM pin. Mirrors BUTTON_GPIO in @wg/shared.
 BUTTON_PINS = {"blue": 12, "yellow": 16, "red": 20, "green": 21}
@@ -73,20 +81,29 @@ class Daemon:
         self.page = 0
         self.last_page_at = 0.0
         self._last_rows = None
+        self.flash_until = 0.0  # transient "button not mapped" message
 
+        # Button init is non-fatal: a GPIO problem must not take the LCD down.
         self.buttons = {}
         for color, pin in BUTTON_PINS.items():
-            b = Button(pin, pull_up=True, bounce_time=0.05)
-            b.when_pressed = self._make_handler(color)
-            self.buttons[color] = b
+            try:
+                b = Button(pin, pull_up=True, bounce_time=0.05)
+                b.when_pressed = self._make_handler(color)
+                self.buttons[color] = b
+            except Exception as e:  # noqa: BLE001
+                print(f"[gpio] button {color} (pin {pin}) failed: {e}", flush=True)
 
     def _make_handler(self, color):
         def handler():
+            now = time.monotonic()
             fn = self.config.get("buttons", {}).get(color)
             if fn:
                 self.active_fn = fn
-                self.last_press = time.monotonic()
+                self.last_press = now
                 self.render = None  # force immediate refetch for the new function
+            else:
+                # Unmapped button — brief feedback, idle timer untouched.
+                self.flash_until = now + FLASH_SECONDS
         return handler
 
     def fetch_config(self):
@@ -188,12 +205,15 @@ class Daemon:
                 self.page = (self.page + 1) % pages
                 self.last_page_at = now
 
-            i = self.page * 2
-            self.write(
-                now,
-                buf[i] if i < len(buf) else "",
-                buf[i + 1] if i + 1 < len(buf) else "",
-            )
+            if now < self.flash_until:
+                self.write(now, "Taste", "nicht belegt")
+            else:
+                i = self.page * 2
+                self.write(
+                    now,
+                    buf[i] if i < len(buf) else "",
+                    buf[i + 1] if i + 1 < len(buf) else "",
+                )
 
             time.sleep(0.05)
 

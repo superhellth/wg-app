@@ -72,7 +72,7 @@ export function MeetingForm() {
         <Stack spacing={2.5}>
           <TextField
             label="Titel"
-            placeholder="z. B. WG-Sitzung"
+            placeholder="z. B. WG-Abend"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             autoFocus

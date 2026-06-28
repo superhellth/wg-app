@@ -9,7 +9,6 @@ import Card from "@mui/material/Card";
 import Checkbox from "@mui/material/Checkbox";
 import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
-import Paper from "@mui/material/Paper";
 import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import Tab from "@mui/material/Tab";
@@ -42,10 +41,21 @@ export function Einkaufen() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<Toast | null>(null);
 
-  const items = tab === "active" ? active.data ?? [] : history.data ?? [];
   const activeNames = new Set(
     (active.data ?? []).map((i) => i.name.trim().toLowerCase()),
   );
+
+  // History deduped by name (case-insensitive) — each article appears once,
+  // most recent first (the query is createdAt desc).
+  const histSeen = new Set<string>();
+  const historyItems = (history.data ?? []).filter((i) => {
+    const k = i.name.trim().toLowerCase();
+    if (histSeen.has(k)) return false;
+    histSeen.add(k);
+    return true;
+  });
+
+  const items = tab === "active" ? active.data ?? [] : historyItems;
 
   // History names (deduped, case-insensitive) that aren't already on the list —
   // suggested while typing.
@@ -192,29 +202,39 @@ export function Einkaufen() {
         </Card>
       )}
 
-      {/* selection action bar */}
+      {/* selection action bar — sits just above the bottom nav */}
       {selected.size > 0 && (
-        <Paper
-          elevation={3}
+        <Box
           sx={{
             position: "fixed",
-            left: 12,
-            right: 12,
-            bottom: 76,
-            p: 1.5,
-            borderRadius: 4,
-            display: "flex",
-            gap: 1,
-            zIndex: 1200,
+            left: 0,
+            right: 0,
+            bottom: 56,
+            zIndex: 1101,
+            bgcolor: "background.paper",
+            borderTop: 1,
+            borderColor: "divider",
           }}
         >
-          <Button variant="outlined" fullWidth onClick={markSelectedBought}>
-            Eingekauft ({selected.size})
-          </Button>
-          <Button variant="contained" fullWidth onClick={createExpense}>
-            Ausgabe erstellen
-          </Button>
-        </Paper>
+          <Box
+            sx={{
+              maxWidth: 640,
+              mx: "auto",
+              px: 2,
+              py: 1.5,
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
+            <Button variant="contained" fullWidth onClick={markSelectedBought}>
+              Eingekauft ({selected.size})
+            </Button>
+            <Button variant="text" onClick={createExpense}>
+              Ausgabe
+            </Button>
+          </Box>
+        </Box>
       )}
 
       <Snackbar

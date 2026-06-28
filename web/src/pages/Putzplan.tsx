@@ -70,9 +70,14 @@ export function Putzplan() {
                         Fällig {dayjs(turn.dueAt).format("dd, DD.MM.")}
                       </Typography>
                     </Box>
-                    <Button variant="contained" size="small" onClick={() => done.mutate(c.id)}>
-                      Erledigt
-                    </Button>
+                    <Stack direction="row" spacing={1}>
+                      <Button size="small" onClick={() => skip.mutate(c.id)}>
+                        Überspringen
+                      </Button>
+                      <Button variant="contained" size="small" onClick={() => done.mutate(c.id)}>
+                        Erledigt
+                      </Button>
+                    </Stack>
                   </Stack>
                 ) : (
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
@@ -107,14 +112,6 @@ export function Putzplan() {
           }}
         >
           Tauschen
-        </MenuItem>
-        <MenuItem
-          onClick={() => {
-            if (menu) skip.mutate(menu.chore.id);
-            setMenu(null);
-          }}
-        >
-          Überspringen
         </MenuItem>
         <MenuItem
           onClick={() => {
