@@ -29,6 +29,7 @@ export const ACTIVITY_KINDS = [
   "chore.skipped",
   "chore.reminded",
   "meeting.created",
+  "meeting.deleted",
   "poll.created",
   "poll.resolved",
   "fixedcost.added",

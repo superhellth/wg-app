@@ -57,6 +57,7 @@ export const meetingsApi = {
       method: "PUT",
       body: JSON.stringify(body),
     }),
+  remove: (id: string) => http<void>(`/api/meetings/${id}`, { method: "DELETE" }),
 };
 
 export function useMeetings() {
@@ -98,3 +99,4 @@ export const useRsvp = () =>
   useMeetingMutation(({ id, body }: { id: string; body: Rsvp }) =>
     meetingsApi.rsvp(id, body),
   );
+export const useDeleteMeeting = () => useMeetingMutation(meetingsApi.remove);

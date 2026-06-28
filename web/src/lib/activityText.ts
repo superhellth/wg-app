@@ -54,6 +54,8 @@ export function activityText(a: Activity): string {
       return "hat an eine Aufgabe erinnert";
     case "meeting.created":
       return `hat „${d?.snapshot?.title ?? "Termin"}" erstellt`;
+    case "meeting.deleted":
+      return `hat „${d?.snapshot?.title ?? "Termin"}" gelöscht`;
     case "poll.created":
       return `hat die Umfrage „${d?.snapshot?.title ?? ""}" gestartet`;
     case "poll.resolved":

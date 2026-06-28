@@ -87,6 +87,42 @@ export async function meetingsRoutes(app: FastifyInstance) {
     return reply.status(201).send(created);
   });
 
+  // Hard-delete a meeting and everything attached (options, votes, rsvps).
+  app.delete("/:id", async (req, reply) => {
+    const actor = requireMember(req);
+    const { id } = parse(idParamSchema, req.params);
+    await db.transaction(async (tx) => {
+      const [before] = await tx
+        .select()
+        .from(schema.meetings)
+        .where(eq(schema.meetings.id, id));
+      if (!before) throw new NotFoundError("meeting not found");
+
+      const options = await tx
+        .select({ id: schema.meetingOptions.id })
+        .from(schema.meetingOptions)
+        .where(eq(schema.meetingOptions.meetingId, id));
+      if (options.length) {
+        await tx.delete(schema.meetingVotes).where(
+          inArray(
+            schema.meetingVotes.optionId,
+            options.map((o) => o.id),
+          ),
+        );
+      }
+      await tx.delete(schema.meetingOptions).where(eq(schema.meetingOptions.meetingId, id));
+      await tx.delete(schema.meetingRsvps).where(eq(schema.meetingRsvps.meetingId, id));
+      await tx.delete(schema.meetings).where(eq(schema.meetings.id, id));
+
+      await logActivity(tx, {
+        memberId: actor.id,
+        kind: "meeting.deleted",
+        data: { snapshot: before },
+      });
+    });
+    return reply.status(204).send();
+  });
+
   // Resolve a poll: pick the winning option → meeting becomes fixed.
   app.post("/:id/resolve", async (req) => {
     const actor = requireMember(req);

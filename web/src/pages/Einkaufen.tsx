@@ -1,6 +1,8 @@
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import ReplayRoundedIcon from "@mui/icons-material/ReplayRounded";
+import Alert from "@mui/material/Alert";
+import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
@@ -8,6 +10,7 @@ import Checkbox from "@mui/material/Checkbox";
 import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
 import Paper from "@mui/material/Paper";
+import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
@@ -15,6 +18,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ApiError } from "../api/client.js";
 import {
   useAddShoppingItem,
   useDeleteShoppingItem,
@@ -22,6 +26,8 @@ import {
   useShopping,
 } from "../api/shopping.js";
 import { EmptyState } from "../components/EmptyState.js";
+
+type Toast = { msg: string; severity: "success" | "info" | "warning" };
 
 export function Einkaufen() {
   const navigate = useNavigate();
@@ -34,8 +40,24 @@ export function Einkaufen() {
 
   const [name, setName] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [toast, setToast] = useState<Toast | null>(null);
 
   const items = tab === "active" ? active.data ?? [] : history.data ?? [];
+  const activeNames = new Set(
+    (active.data ?? []).map((i) => i.name.trim().toLowerCase()),
+  );
+
+  // History names (deduped, case-insensitive) that aren't already on the list —
+  // suggested while typing.
+  const suggestions: string[] = [];
+  const seen = new Set<string>();
+  for (const i of history.data ?? []) {
+    const n = i.name.trim();
+    const k = n.toLowerCase();
+    if (!n || seen.has(k) || activeNames.has(k)) continue;
+    seen.add(k);
+    suggestions.push(n);
+  }
 
   const toggleSel = (id: string) =>
     setSelected((p) => {
@@ -44,10 +66,33 @@ export function Einkaufen() {
       return n;
     });
 
-  const submitAdd = () => {
-    const n = name.trim();
+  // Add an item with feedback. Guards duplicates client-side; the server is the
+  // backstop (409 → same message). Used by the input and the history re-add.
+  const addItem = (raw: string) => {
+    const n = raw.trim();
     if (!n) return;
-    add.mutate({ name: n });
+    if (activeNames.has(n.toLowerCase())) {
+      setToast({ msg: `„${n}" steht schon auf der Liste`, severity: "info" });
+      return;
+    }
+    add.mutate(
+      { name: n },
+      {
+        onSuccess: () => setToast({ msg: `„${n}" hinzugefügt`, severity: "success" }),
+        onError: (e) =>
+          setToast({
+            msg:
+              e instanceof ApiError && e.code === "conflict"
+                ? `„${n}" steht schon auf der Liste`
+                : "Konnte nicht hinzugefügt werden",
+            severity: "warning",
+          }),
+      },
+    );
+  };
+
+  const submitAdd = () => {
+    addItem(name);
     setName("");
   };
 
@@ -72,33 +117,36 @@ export function Einkaufen() {
       </Tabs>
 
       {tab === "active" && (
-        <Stack
-          component="form"
-          direction="row"
-          spacing={1}
-          sx={{ mb: 2 }}
-          onSubmit={(e) => {
-            e.preventDefault();
-            submitAdd();
+        <Autocomplete
+          freeSolo
+          options={suggestions}
+          inputValue={name}
+          onInputChange={(_, v) => setName(v)}
+          onChange={(_, v) => {
+            // Picking a suggestion (or Enter on free text) adds immediately.
+            if (typeof v === "string" && v.trim()) addItem(v);
           }}
-        >
-          <TextField
-            placeholder="Artikel hinzufügen…"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            fullWidth
-            size="small"
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton type="submit" size="small" disabled={!name.trim()}>
-                    <AddRoundedIcon />
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-          />
-        </Stack>
+          clearOnBlur={false}
+          fullWidth
+          size="small"
+          sx={{ mb: 2 }}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              placeholder="Artikel hinzufügen…"
+              InputProps={{
+                ...params.InputProps,
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton size="small" disabled={!name.trim()} onClick={submitAdd}>
+                      <AddRoundedIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+          )}
+        />
       )}
 
       {items.length === 0 ? (
@@ -130,7 +178,11 @@ export function Einkaufen() {
               ) : (
                 <>
                   <Typography sx={{ flex: 1, color: "text.secondary" }}>{item.name}</Typography>
-                  <IconButton size="small" onClick={() => add.mutate({ name: item.name })}>
+                  <IconButton
+                    size="small"
+                    onClick={() => addItem(item.name)}
+                    disabled={activeNames.has(item.name.trim().toLowerCase())}
+                  >
                     <ReplayRoundedIcon fontSize="small" />
                   </IconButton>
                 </>
@@ -164,6 +216,23 @@ export function Einkaufen() {
           </Button>
         </Paper>
       )}
+
+      <Snackbar
+        open={!!toast}
+        autoHideDuration={2500}
+        onClose={() => setToast(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        {toast ? (
+          <Alert
+            severity={toast.severity}
+            variant="filled"
+            onClose={() => setToast(null)}
+          >
+            {toast.msg}
+          </Alert>
+        ) : undefined}
+      </Snackbar>
     </Box>
   );
 }

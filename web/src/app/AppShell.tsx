@@ -22,7 +22,7 @@ import { MemberAvatar } from "../components/MemberAvatar.js";
 
 const TABS = [
   { path: "/", label: "Start", icon: <HomeRoundedIcon /> },
-  { path: "/geld", label: "Geld", icon: <PaymentsRoundedIcon /> },
+  { path: "/geld", label: "Ausgaben", icon: <PaymentsRoundedIcon /> },
   { path: "/putzplan", label: "Putzplan", icon: <CleaningServicesRoundedIcon /> },
   { path: "/einkaufen", label: "Einkaufen", icon: <ShoppingCartRoundedIcon /> },
   { path: "/termine", label: "Termine", icon: <EventRoundedIcon /> },
@@ -30,7 +30,7 @@ const TABS = [
 
 const TITLES: Record<string, string> = {
   "/": "Start",
-  "/geld": "Geld",
+  "/geld": "Ausgaben",
   "/putzplan": "Putzplan",
   "/einkaufen": "Einkaufen",
   "/termine": "Termine",

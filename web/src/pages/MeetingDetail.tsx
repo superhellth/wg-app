@@ -1,4 +1,5 @@
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
+import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
@@ -16,6 +17,7 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useIdentity } from "../api/identity.js";
 import {
+  useDeleteMeeting,
   useMeeting,
   useResolvePoll,
   useRsvp,
@@ -35,7 +37,13 @@ export function MeetingDetail() {
   const unvote = useUnvote();
   const resolve = useResolvePoll();
   const rsvp = useRsvp();
+  const del = useDeleteMeeting();
   const [resolveOpen, setResolveOpen] = useState(false);
+
+  const handleDelete = () => {
+    if (!window.confirm("Diesen Termin wirklich löschen?")) return;
+    del.mutate(id, { onSuccess: () => navigate("/termine", { replace: true }) });
+  };
 
   if (!detail.data) return <Box sx={{ p: 2 }}>Lädt…</Box>;
   const { meeting, options, votes, rsvps } = detail.data;
@@ -54,6 +62,9 @@ export function MeetingDetail() {
           <ArrowBackRoundedIcon />
         </IconButton>
         <Typography variant="h5" sx={{ flex: 1 }}>{meeting.title}</Typography>
+        <IconButton onClick={handleDelete} disabled={del.isPending}>
+          <DeleteOutlineRoundedIcon />
+        </IconButton>
       </Stack>
 
       {!isPoll && meeting.startsAt && (

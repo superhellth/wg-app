@@ -3,11 +3,11 @@ import {
   idParamSchema,
   shoppingQuerySchema,
 } from "@wg/shared";
-import { desc, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db/client.js";
 import { logActivity } from "../lib/activity.js";
-import { NotFoundError } from "../lib/errors.js";
+import { ConflictError, NotFoundError } from "../lib/errors.js";
 import { parse } from "../lib/parse.js";
 import { requireMember } from "../plugins/auth.js";
 
@@ -29,10 +29,25 @@ export async function shoppingRoutes(app: FastifyInstance) {
   app.post("/", async (req, reply) => {
     const actor = requireMember(req);
     const body = parse(createShoppingItemSchema, req.body);
+    const name = body.name.trim();
     const item = await db.transaction(async (tx) => {
+      // Active list names are unique (case-insensitive) — no buying the same
+      // thing twice. Bought/history items don't count.
+      const [dupe] = await tx
+        .select({ id: schema.shoppingItems.id })
+        .from(schema.shoppingItems)
+        .where(
+          and(
+            isNull(schema.shoppingItems.boughtAt),
+            sql`lower(${schema.shoppingItems.name}) = ${name.toLowerCase()}`,
+          ),
+        )
+        .limit(1);
+      if (dupe) throw new ConflictError("Artikel steht schon auf der Liste");
+
       const [it] = await tx
         .insert(schema.shoppingItems)
-        .values({ name: body.name, addedByMemberId: actor.id })
+        .values({ name, addedByMemberId: actor.id })
         .returning();
       await logActivity(tx, {
         memberId: actor.id,
