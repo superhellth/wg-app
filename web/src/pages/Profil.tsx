@@ -6,16 +6,24 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardActionArea from "@mui/material/CardActionArea";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import { useQueryClient } from "@tanstack/react-query";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs, { type Dayjs } from "dayjs";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { setMemberId, useIdentity } from "../api/identity.js";
+import { ApiError } from "../api/client.js";
+import { clearIdentity, setMemberId, useIdentity } from "../api/identity.js";
 import { useMembersMap, useUpdateMember } from "../api/members.js";
+import { wgApi } from "../api/wg.js";
 import { MemberAvatar } from "../components/MemberAvatar.js";
 import { SectionLabel } from "../components/SectionLabel.js";
 import {
@@ -34,6 +42,7 @@ export function Profil() {
   const me = memberId ? members.get(memberId) : undefined;
 
   const [pushState, setPushState] = useState<PushResult | "pending" | null>(null);
+  const [resetOpen, setResetOpen] = useState(false);
   const [away, setAway] = useState<Dayjs | null>(
     me?.awayUntil ? dayjs(me.awayUntil) : null,
   );
@@ -146,7 +155,86 @@ export function Profil() {
             </LocalizationProvider>
           </Card>
         </Box>
+
+        {/* Danger zone */}
+        <Box>
+          <SectionLabel>Gefahrenzone</SectionLabel>
+          <Card sx={{ p: 2 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+              Setzt die gesamte WG zurück. Alle Daten werden unwiderruflich
+              gelöscht und die App startet neu.
+            </Typography>
+            <Button color="error" variant="outlined" onClick={() => setResetOpen(true)}>
+              WG zurücksetzen
+            </Button>
+          </Card>
+        </Box>
       </Stack>
+
+      <ResetDialog open={resetOpen} onClose={() => setResetOpen(false)} />
     </Box>
+  );
+}
+
+function ResetDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await wgApi.reset(password);
+      clearIdentity();
+      qc.clear();
+      navigate("/willkommen", { replace: true });
+    } catch (e) {
+      setError(
+        e instanceof ApiError && e.code === "forbidden"
+          ? "Falsches Passwort."
+          : "Zurücksetzen fehlgeschlagen.",
+      );
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={busy ? undefined : onClose} fullWidth maxWidth="xs">
+      <DialogTitle>WG zurücksetzen</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ mt: 0.5 }}>
+          <Alert severity="warning">
+            Das löscht ALLE Daten der WG (Mitglieder, Ausgaben, Aufgaben, Termine,
+            Einkaufsliste, Verlauf) unwiderruflich. Zum Bestätigen das Passwort
+            eingeben.
+          </Alert>
+          <TextField
+            type="password"
+            label="Passwort"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoFocus
+            fullWidth
+          />
+          {error && <Alert severity="error">{error}</Alert>}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} disabled={busy}>
+          Abbrechen
+        </Button>
+        <Button
+          color="error"
+          variant="contained"
+          disabled={!password || busy}
+          onClick={submit}
+        >
+          {busy ? "Wird gelöscht…" : "Alles löschen"}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }

@@ -35,7 +35,8 @@ from RPLCD.i2c import CharLCD
 API_URL = os.environ.get("API_URL", "http://api:3000").rstrip("/")
 WG_TOKEN = os.environ.get("WG_TOKEN_SECRET", "")
 LCD_ADDRESS = int(os.environ.get("LCD_ADDRESS", "0x3f"), 16)
-LCD_PORT = int(os.environ.get("LCD_PORT", "1"))
+LCD_PORT = int(os.environ.get("LCD_PORT", "1"))  # /dev/i2c-1 (SDA1/SCL1)
+LCD_CHARMAP = os.environ.get("LCD_CHARMAP", "A00")
 COLS = int(os.environ.get("LCD_COLS", "16"))
 ROWS = int(os.environ.get("LCD_ROWS", "2"))
 POLL_SECONDS = float(os.environ.get("POLL_SECONDS", "10"))
@@ -139,7 +140,7 @@ class Daemon:
         try:
             self.lcd = CharLCD(
                 i2c_expander="PCF8574", address=LCD_ADDRESS, port=LCD_PORT,
-                cols=COLS, rows=ROWS, auto_linebreaks=False,
+                cols=COLS, rows=ROWS, auto_linebreaks=False, charmap=LCD_CHARMAP,
             )
             self._last_rows = None  # force a full redraw on the fresh screen
             print("[lcd] connected", flush=True)

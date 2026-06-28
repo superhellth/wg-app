@@ -92,7 +92,7 @@ services:
     environment:
       API_URL: http://api:3000
       LCD_ADDRESS: "0x3f"
-      LCD_PORT: "1"
+      LCD_PORT: "1" # /dev/i2c-1 (SDA1/SCL1)
     privileged: true
     devices:
       - /dev/gpiomem:/dev/gpiomem

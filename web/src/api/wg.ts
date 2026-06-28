@@ -9,4 +9,9 @@ export const wgApi = {
       `/api/invites/${encodeURIComponent(token)}/redeem`,
       { method: "POST" },
     ),
+  reset: (password: string) =>
+    http<void>("/api/wg/reset", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    }),
 };
