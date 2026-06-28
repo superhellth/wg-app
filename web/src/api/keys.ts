@@ -13,4 +13,5 @@ export const qk = {
   meeting: (id: string) => ["meetings", id] as const,
   fixedCosts: ["fixedCosts"] as const,
   activity: ["activity"] as const,
+  displayConfig: ["displayConfig"] as const,
 };

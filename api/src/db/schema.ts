@@ -1,6 +1,7 @@
 import {
   BILLING_CYCLES,
   CHORE_FREQUENCIES,
+  DISPLAY_FUNCTIONS,
   MEETING_MODES,
   type PushKeys,
   RSVP_VALUES,
@@ -23,6 +24,7 @@ export const choreFrequencyEnum = pgEnum("chore_frequency", CHORE_FREQUENCIES);
 export const meetingModeEnum = pgEnum("meeting_mode", MEETING_MODES);
 export const rsvpEnum = pgEnum("rsvp", RSVP_VALUES);
 export const billingCycleEnum = pgEnum("billing_cycle", BILLING_CYCLES);
+export const displayFunctionEnum = pgEnum("display_function", DISPLAY_FUNCTIONS);
 
 // ── core ────────────────────────────────────────────────────────────
 /** Single WG (one row). The shared WG join secret lives in env, not here. */
@@ -164,6 +166,19 @@ export const meetingRsvps = pgTable("meeting_rsvps", {
   meetingId: uuid("meeting_id").references(() => meetings.id).notNull(),
   memberId: uuid("member_id").references(() => members.id).notNull(),
   value: rsvpEnum("value").notNull(),
+});
+
+// ── physical Pi display (one row) ───────────────────────────────────
+// 4 buttons (blue/yellow/red/green → GPIO 12/16/20/21) map to display
+// functions; defaultFunction shows when idle. Driven by the LCD daemon.
+export const displayConfig = pgTable("display_config", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  defaultFunction: displayFunctionEnum("default_function").notNull().default("saldo"),
+  idleTimeoutSeconds: integer("idle_timeout_seconds").notNull().default(30),
+  buttonBlue: displayFunctionEnum("button_blue"),
+  buttonYellow: displayFunctionEnum("button_yellow"),
+  buttonRed: displayFunctionEnum("button_red"),
+  buttonGreen: displayFunctionEnum("button_green"),
 });
 
 // ── activity feed (append-only; also the audit trail) ───────────────

@@ -1,8 +1,11 @@
+import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import NotificationsActiveRoundedIcon from "@mui/icons-material/NotificationsActiveRounded";
+import TvRoundedIcon from "@mui/icons-material/TvRounded";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
+import CardActionArea from "@mui/material/CardActionArea";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -10,6 +13,7 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs, { type Dayjs } from "dayjs";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { setMemberId, useIdentity } from "../api/identity.js";
 import { useMembersMap, useUpdateMember } from "../api/members.js";
 import { MemberAvatar } from "../components/MemberAvatar.js";
@@ -23,6 +27,7 @@ import {
 } from "../lib/push.js";
 
 export function Profil() {
+  const navigate = useNavigate();
   const { memberId } = useIdentity();
   const members = useMembersMap();
   const update = useUpdateMember();
@@ -99,6 +104,25 @@ export function Profil() {
                 )}
               </Stack>
             )}
+          </Card>
+        </Box>
+
+        {/* Physical display */}
+        <Box>
+          <SectionLabel>Pi-Anzeige</SectionLabel>
+          <Card>
+            <CardActionArea onClick={() => navigate("/anzeige")} sx={{ p: 2 }}>
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <TvRoundedIcon color="action" />
+                <Box sx={{ flex: 1 }}>
+                  <Typography sx={{ fontWeight: 600 }}>Tasten &amp; Display</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Tasten den Anzeige-Funktionen zuordnen
+                  </Typography>
+                </Box>
+                <ChevronRightRoundedIcon color="action" />
+              </Stack>
+            </CardActionArea>
           </Card>
         </Box>
 
