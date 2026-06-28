@@ -14,7 +14,8 @@ ARG VITE_API_URL
 ARG VITE_VAPID_PUBLIC_KEY
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_VAPID_PUBLIC_KEY=$VITE_VAPID_PUBLIC_KEY
-RUN pnpm --filter @wg/shared build && pnpm --filter @wg/web build
+RUN pnpm --filter @wg/shared build
+RUN pnpm --filter @wg/web build
 
 FROM caddy:2-alpine
 COPY web/Caddyfile /etc/caddy/Caddyfile
