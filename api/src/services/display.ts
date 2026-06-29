@@ -1,7 +1,16 @@
 import type { DisplayFunction, DisplayRender } from "@wg/shared";
 import { and, desc, eq, isNull } from "drizzle-orm";
+import dayjs from "dayjs";
+import timezone from "dayjs/plugin/timezone.js";
+import utc from "dayjs/plugin/utc.js";
 import { db, schema } from "../db/client.js";
 import { computeBalances } from "./balances.js";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+/** Single German WG → render LCD times in Berlin regardless of host tz. */
+const TZ = "Europe/Berlin";
 
 /** Hard cap to 16 columns (the LCD width). */
 const COLS = 16;
@@ -17,11 +26,7 @@ function euro(cents: number, signed = false): string {
 }
 
 function ddmm(date: Date): string {
-  const d = String(date.getDate()).padStart(2, "0");
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const hh = String(date.getHours()).padStart(2, "0");
-  const mm = String(date.getMinutes()).padStart(2, "0");
-  return `${d}.${m}. ${hh}:${mm}`;
+  return dayjs(date).tz(TZ).format("DD.MM. HH:mm");
 }
 
 async function memberNames(): Promise<Map<string, string>> {
@@ -45,7 +50,8 @@ async function renderShopping(): Promise<DisplayRender> {
     .from(schema.shoppingItems)
     .where(isNull(schema.shoppingItems.boughtAt))
     .orderBy(desc(schema.shoppingItems.createdAt));
-  const lines = items.map((i) => clip(i.name));
+  // Full names — the LCD daemon scrolls anything wider than the panel.
+  const lines = items.map((i) => i.name);
   return {
     function: "shopping",
     title: `Einkauf (${items.length})`,
@@ -101,7 +107,7 @@ async function renderAppointment(): Promise<DisplayRender> {
     function: "appointment",
     title: "Naechster Termin",
     lines: next
-      ? [clip(next.title), ddmm(next.startsAt!)]
+      ? [next.title, ddmm(next.startsAt!)]
       : ["- keiner -"],
   };
 }

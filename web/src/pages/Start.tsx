@@ -16,8 +16,9 @@ import { useMembersMap } from "../api/members.js";
 import { useRecentActivity } from "../api/activity.js";
 import { ActivityRow } from "../components/ActivityRow.js";
 import { MoneyText } from "../components/MoneyText.js";
+import { ParticipationChips } from "../components/ParticipationChips.js";
 import { SectionLabel } from "../components/SectionLabel.js";
-import { formatDateTime } from "../lib/format.js";
+import { formatDate, formatDateTime } from "../lib/format.js";
 
 export function Start() {
   const navigate = useNavigate();
@@ -83,7 +84,7 @@ export function Start() {
             <Box>
               <Typography variant="h6">{myTurn.name}</Typography>
               <Typography variant="body2" color="text.secondary">
-                Fällig {dayjs(myTurn.currentTurn.dueAt).format("dd, DD.MM.")}
+                Fällig {formatDate(myTurn.currentTurn.dueAt)}
               </Typography>
             </Box>
             <Button
@@ -109,6 +110,7 @@ export function Start() {
             <Button
               size="small"
               variant={myRsvp === "yes" ? "contained" : "outlined"}
+              disabled={myRsvp === "yes"}
               onClick={() => rsvp.mutate({ id: nextMeeting.id, body: { value: "yes" } })}
             >
               Ja
@@ -117,11 +119,15 @@ export function Start() {
               size="small"
               variant={myRsvp === "no" ? "contained" : "outlined"}
               color="inherit"
+              disabled={myRsvp === "no"}
               onClick={() => rsvp.mutate({ id: nextMeeting.id, body: { value: "no" } })}
             >
               Nein
             </Button>
           </Stack>
+          <Box sx={{ mt: 1.5 }}>
+            <ParticipationChips rsvps={nextDetail.data?.rsvps ?? []} />
+          </Box>
         </Card>
       )}
 

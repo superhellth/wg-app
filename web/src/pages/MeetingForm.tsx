@@ -15,7 +15,15 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import type { CreateMeeting, MeetingMode, UpdateMeeting } from "@wg/shared";
 import dayjs, { type Dayjs } from "dayjs";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
 import { useEffect, useState } from "react";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+/** The WG lives in one place — pickers operate in Berlin regardless of device tz. */
+const WG_TZ = "Europe/Berlin";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   useCreateMeeting,
@@ -40,11 +48,13 @@ export function MeetingForm() {
 
   const [title, setTitle] = useState("");
   const [mode, setMode] = useState<MeetingMode>("fixed");
-  const [startsAt, setStartsAt] = useState<Dayjs | null>(dayjs().add(1, "day").hour(19).minute(0));
+  const [startsAt, setStartsAt] = useState<Dayjs | null>(
+    dayjs().tz(WG_TZ).add(1, "day").hour(19).minute(0).second(0),
+  );
   const [recurEveryDays, setRecurEveryDays] = useState("7");
   const [options, setOptions] = useState<(Dayjs | null)[]>([
-    dayjs().add(1, "day").hour(19).minute(0),
-    dayjs().add(2, "day").hour(19).minute(0),
+    dayjs().tz(WG_TZ).add(1, "day").hour(19).minute(0).second(0),
+    dayjs().tz(WG_TZ).add(2, "day").hour(19).minute(0).second(0),
   ]);
 
   // Prefill from the existing meeting when editing.
@@ -53,7 +63,7 @@ export function MeetingForm() {
     if (!isEdit || !meeting) return;
     setTitle(meeting.title);
     setMode(meeting.mode);
-    if (meeting.startsAt) setStartsAt(dayjs(meeting.startsAt));
+    if (meeting.startsAt) setStartsAt(dayjs(meeting.startsAt).tz(WG_TZ));
     if (meeting.recurEveryDays) setRecurEveryDays(String(meeting.recurEveryDays));
   }, [isEdit, meeting]);
 
@@ -139,6 +149,7 @@ export function MeetingForm() {
               label="Wann?"
               value={startsAt}
               onChange={setStartsAt}
+              timezone={WG_TZ}
               ampm={false}
             />
           )}
@@ -171,6 +182,7 @@ export function MeetingForm() {
                       onChange={(v) =>
                         setOptions((p) => p.map((o, j) => (j === i ? v : o)))
                       }
+                      timezone={WG_TZ}
                       ampm={false}
                       sx={{ flex: 1 }}
                     />

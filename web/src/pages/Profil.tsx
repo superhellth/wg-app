@@ -18,7 +18,15 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs, { type Dayjs } from "dayjs";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
 import { useState } from "react";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+/** The WG lives in one place — operate on Berlin days regardless of device tz. */
+const WG_TZ = "Europe/Berlin";
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "../api/client.js";
 import { clearIdentity, setMemberId, useIdentity } from "../api/identity.js";
@@ -44,7 +52,7 @@ export function Profil() {
   const [pushState, setPushState] = useState<PushResult | "pending" | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
   const [away, setAway] = useState<Dayjs | null>(
-    me?.awayUntil ? dayjs(me.awayUntil) : null,
+    me?.awayUntil ? dayjs(me.awayUntil).tz(WG_TZ) : null,
   );
 
   const needsInstall = isIOS() && !isStandalone();
@@ -58,7 +66,7 @@ export function Profil() {
   const saveAway = (value: Dayjs | null) => {
     setAway(value);
     if (!memberId) return;
-    update.mutate({ id: memberId, body: { awayUntil: value ? value.endOf("day").toISOString() : null } });
+    update.mutate({ id: memberId, body: { awayUntil: value ? value.tz(WG_TZ).endOf("day").toISOString() : null } });
   };
 
   return (
@@ -148,6 +156,7 @@ export function Profil() {
                   label="Abwesend bis"
                   value={away}
                   onChange={saveAway}
+                  timezone={WG_TZ}
                   disablePast
                 />
                 {away && <Button onClick={() => saveAway(null)}>Zurücksetzen</Button>}

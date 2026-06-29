@@ -1,9 +1,16 @@
 import dayjs from "dayjs";
 import "dayjs/locale/de.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
 
 dayjs.extend(relativeTime);
+dayjs.extend(utc);
+dayjs.extend(timezone);
 dayjs.locale("de");
+
+/** The WG lives in one place — render times in Berlin regardless of device tz. */
+const WG_TZ = "Europe/Berlin";
 
 const eur = new Intl.NumberFormat("de-DE", {
   style: "currency",
@@ -30,7 +37,27 @@ export function fromNow(iso: string): string {
 
 /** "Mo, 14:30" style short date-time */
 export function formatDateTime(iso: string): string {
-  return dayjs(iso).format("dd, DD.MM. HH:mm");
+  return dayjs(iso).tz(WG_TZ).format("dd, DD.MM. HH:mm");
+}
+
+/** "Mo, 14.05." style short date (no time) */
+export function formatDate(iso: string): string {
+  return dayjs(iso).tz(WG_TZ).format("dd, DD.MM.");
+}
+
+/** Full weekday, e.g. "Mittwoch" */
+export function formatWeekday(iso: string): string {
+  return dayjs(iso).tz(WG_TZ).format("dddd");
+}
+
+/** "25. Juni" */
+export function formatDayMonth(iso: string): string {
+  return dayjs(iso).tz(WG_TZ).format("D. MMMM");
+}
+
+/** "19:00" */
+export function formatTime(iso: string): string {
+  return dayjs(iso).tz(WG_TZ).format("HH:mm");
 }
 
 /** cents → "14,50" plain editable string (no currency symbol), for form prefill. */

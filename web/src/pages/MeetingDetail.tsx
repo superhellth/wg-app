@@ -1,9 +1,12 @@
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
+import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
+import RepeatRoundedIcon from "@mui/icons-material/RepeatRounded";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
+import Chip from "@mui/material/Chip";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import Divider from "@mui/material/Divider";
@@ -26,9 +29,22 @@ import {
   useVote,
 } from "../api/meetings.js";
 import { useConfirm } from "../components/ConfirmDialog.js";
-import { MemberChip } from "../components/MemberChip.js";
+import { ParticipationChips } from "../components/ParticipationChips.js";
 import { SectionLabel } from "../components/SectionLabel.js";
-import { formatDateTime } from "../lib/format.js";
+import {
+  formatDateTime,
+  formatDayMonth,
+  formatTime,
+  formatWeekday,
+} from "../lib/format.js";
+
+/** Human label for a recurring meeting's cadence. */
+function recurrenceLabel(days: number | null): string | null {
+  if (!days) return null;
+  if (days === 7) return "Wöchentlich";
+  if (days === 14) return "Alle 2 Wochen";
+  return `Alle ${days} Tage`;
+}
 
 export function MeetingDetail() {
   const { id = "" } = useParams();
@@ -57,6 +73,8 @@ export function MeetingDetail() {
   if (!detail.data) return <Box sx={{ p: 2 }}>Lädt…</Box>;
   const { meeting, options, votes, rsvps } = detail.data;
   const isPoll = meeting.mode === "poll" && !meeting.startsAt;
+  const recurLabel =
+    meeting.mode === "recurring" ? recurrenceLabel(meeting.recurEveryDays) : null;
 
   const myRsvp = rsvps.find((r) => r.memberId === memberId)?.value;
   const attendees = rsvps.filter((r) => r.value === "yes").map((r) => r.memberId);
@@ -66,11 +84,11 @@ export function MeetingDetail() {
 
   return (
     <Box sx={{ p: 2 }}>
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+      <Stack direction="row" alignItems="center" sx={{ mb: 1 }}>
         <IconButton edge="start" onClick={() => navigate(-1)}>
           <ArrowBackRoundedIcon />
         </IconButton>
-        <Typography variant="h5" sx={{ flex: 1 }}>{meeting.title}</Typography>
+        <Box sx={{ flex: 1 }} />
         <IconButton onClick={() => navigate(`/termine/${id}/bearbeiten`)}>
           <EditRoundedIcon />
         </IconButton>
@@ -79,10 +97,40 @@ export function MeetingDetail() {
         </IconButton>
       </Stack>
 
+      <Typography variant="h4" sx={{ fontWeight: 700, mb: 2, lineHeight: 1.2 }}>
+        {meeting.title}
+      </Typography>
+
       {!isPoll && meeting.startsAt && (
-        <Typography color="text.secondary" sx={{ mb: 2 }}>
-          {formatDateTime(meeting.startsAt)}
-        </Typography>
+        <Card
+          sx={{
+            p: 2,
+            mb: 3,
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            bgcolor: "rgba(91,79,233,0.07)",
+            border: "1px solid rgba(91,79,233,0.16)",
+          }}
+        >
+          <CalendarMonthRoundedIcon sx={{ color: "primary.main", fontSize: 34 }} />
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+              {formatWeekday(meeting.startsAt)}
+            </Typography>
+            <Typography color="text.secondary">
+              {formatDayMonth(meeting.startsAt)} · {formatTime(meeting.startsAt)} Uhr
+            </Typography>
+          </Box>
+          {recurLabel && (
+            <Chip
+              icon={<RepeatRoundedIcon />}
+              label={recurLabel}
+              size="small"
+              sx={{ bgcolor: "background.paper" }}
+            />
+          )}
+        </Card>
       )}
 
       {/* Poll */}
@@ -157,41 +205,39 @@ export function MeetingDetail() {
       </Dialog>
 
       {/* RSVP — only once the time is fixed (no point committing to a poll). */}
-      <SectionLabel>Bist du dabei?</SectionLabel>
+      <SectionLabel>Deine Antwort</SectionLabel>
       {isPoll ? (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           Zusagen sind möglich, sobald die Zeit festgelegt ist.
         </Typography>
       ) : (
-        <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-          <Button
-            variant={myRsvp === "yes" ? "contained" : "outlined"}
-            onClick={() => rsvp.mutate({ id, body: { value: "yes" } })}
-          >
-            Ja
-          </Button>
-          <Button
-            variant={myRsvp === "no" ? "contained" : "outlined"}
-            color="inherit"
-            onClick={() => rsvp.mutate({ id, body: { value: "no" } })}
-          >
-            Nein
-          </Button>
-        </Stack>
+        <Card sx={{ p: 1.5, mb: 3 }}>
+          <Stack direction="row" spacing={1}>
+            <Button
+              fullWidth
+              variant={myRsvp === "yes" ? "contained" : "outlined"}
+              disabled={myRsvp === "yes"}
+              onClick={() => rsvp.mutate({ id, body: { value: "yes" } })}
+            >
+              Ja
+            </Button>
+            <Button
+              fullWidth
+              variant={myRsvp === "no" ? "contained" : "outlined"}
+              color="inherit"
+              disabled={myRsvp === "no"}
+              onClick={() => rsvp.mutate({ id, body: { value: "no" } })}
+            >
+              Nein
+            </Button>
+          </Stack>
+        </Card>
       )}
 
-      <SectionLabel>Zusagen ({attendees.length})</SectionLabel>
-      {attendees.length > 0 ? (
-        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-          {attendees.map((mid) => (
-            <MemberChip key={mid} memberId={mid} />
-          ))}
-        </Stack>
-      ) : (
-        <Typography variant="body2" color="text.secondary">
-          Noch keine Zusagen.
-        </Typography>
-      )}
+      <SectionLabel>Teilnahme ({attendees.length} zugesagt)</SectionLabel>
+      <Card sx={{ p: 1.5 }}>
+        <ParticipationChips rsvps={rsvps} />
+      </Card>
     </Box>
   );
 }

@@ -18,6 +18,7 @@ import { useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useIdentity, setMemberId } from "../api/identity.js";
 import { useMembersMap } from "../api/members.js";
+import { InstallPrompt } from "../components/InstallPrompt.js";
 import { MemberAvatar } from "../components/MemberAvatar.js";
 
 const TABS = [
@@ -86,7 +87,6 @@ export function AppShell() {
               />
             </MenuItem>
             <Divider />
-            <MenuItem onClick={() => go("/aktivitaet")}>Aktivität</MenuItem>
             <MenuItem onClick={() => go("/fixkosten")}>Fixkosten</MenuItem>
             <MenuItem onClick={() => go("/mitbewohner")}>Mitbewohner</MenuItem>
             <MenuItem onClick={() => go("/profil")}>Profil & Einstellungen</MenuItem>
@@ -104,6 +104,7 @@ export function AppShell() {
       </AppBar>
 
       <Box component="main" sx={{ flex: 1, pb: 9, maxWidth: 640, width: "100%", mx: "auto" }}>
+        <InstallPrompt />
         <Outlet />
       </Box>
 
