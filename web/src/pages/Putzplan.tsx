@@ -64,18 +64,18 @@ export function Putzplan() {
                   {overdue && <Chip label="Überfällig" color="error" size="small" />}
                   <IconButton
                     size="small"
-                    aria-label="Bearbeiten"
-                    onClick={() => navigate(`/putzplan/${c.id}/bearbeiten`)}
-                  >
-                    <EditRoundedIcon />
-                  </IconButton>
-                  <IconButton
-                    size="small"
                     aria-label="Erinnern"
                     disabled={!turn}
                     onClick={() => remind.mutate(c.id)}
                   >
                     <NotificationsActiveRoundedIcon />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    aria-label="Bearbeiten"
+                    onClick={() => navigate(`/putzplan/${c.id}/bearbeiten`)}
+                  >
+                    <EditRoundedIcon />
                   </IconButton>
                 </Stack>
 

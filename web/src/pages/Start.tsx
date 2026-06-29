@@ -1,9 +1,13 @@
+import CancelRoundedIcon from "@mui/icons-material/CancelRounded";
+import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardActionArea from "@mui/material/CardActionArea";
 import Chip from "@mui/material/Chip";
+import Divider from "@mui/material/Divider";
+import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import dayjs from "dayjs";
@@ -101,33 +105,33 @@ export function Start() {
       {/* Nächster Termin */}
       {nextMeeting && (
         <Card sx={{ p: 2.5 }}>
-          <SectionLabel>Nächster Termin</SectionLabel>
+          <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
+            <SectionLabel>Nächster Termin</SectionLabel>
+            <Stack direction="row" spacing={0.5} sx={{ mt: -0.5 }}>
+              <IconButton
+                size="small"
+                aria-label="Zusagen"
+                onClick={() => rsvp.mutate({ id: nextMeeting.id, body: { value: "yes" } })}
+                sx={{ color: myRsvp === "yes" ? "#0E8A5F" : "text.disabled" }}
+              >
+                <CheckCircleRoundedIcon />
+              </IconButton>
+              <IconButton
+                size="small"
+                aria-label="Absagen"
+                onClick={() => rsvp.mutate({ id: nextMeeting.id, body: { value: "no" } })}
+                sx={{ color: myRsvp === "no" ? "#C8553D" : "text.disabled" }}
+              >
+                <CancelRoundedIcon />
+              </IconButton>
+            </Stack>
+          </Stack>
           <Typography variant="h6">{nextMeeting.title}</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+          <Typography variant="body2" color="text.secondary">
             {nextMeeting.startsAt ? formatDateTime(nextMeeting.startsAt) : ""}
           </Typography>
-          <Stack direction="row" spacing={1}>
-            <Button
-              size="small"
-              variant={myRsvp === "yes" ? "contained" : "outlined"}
-              disabled={myRsvp === "yes"}
-              onClick={() => rsvp.mutate({ id: nextMeeting.id, body: { value: "yes" } })}
-            >
-              Ja
-            </Button>
-            <Button
-              size="small"
-              variant={myRsvp === "no" ? "contained" : "outlined"}
-              color="inherit"
-              disabled={myRsvp === "no"}
-              onClick={() => rsvp.mutate({ id: nextMeeting.id, body: { value: "no" } })}
-            >
-              Nein
-            </Button>
-          </Stack>
-          <Box sx={{ mt: 1.5 }}>
-            <ParticipationChips rsvps={nextDetail.data?.rsvps ?? []} />
-          </Box>
+          <Divider sx={{ my: 1.5 }} />
+          <ParticipationChips rsvps={nextDetail.data?.rsvps ?? []} />
         </Card>
       )}
 

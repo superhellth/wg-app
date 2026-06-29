@@ -5,27 +5,36 @@ import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import type { MeetingRsvp } from "../api/meetings.js";
 import { useMembers } from "../api/members.js";
-import { useMemberColor } from "../theme/useMemberColor.js";
 
 type Status = "yes" | "no" | "pending";
 
+/** Chip is tinted by RSVP status — green / red / yellow — not by member color. */
 const STATUS = {
-  yes: { Icon: CheckCircleRoundedIcon, color: "success.main", title: "Zugesagt" },
-  no: { Icon: CancelRoundedIcon, color: "error.main", title: "Abgesagt" },
-  pending: { Icon: HelpRoundedIcon, color: "text.disabled", title: "Keine Antwort" },
+  yes: {
+    Icon: CheckCircleRoundedIcon,
+    bg: "#E2F1EA",
+    ink: "#0E6B49",
+    icon: "#0E8A5F",
+    title: "Zugesagt",
+  },
+  no: {
+    Icon: CancelRoundedIcon,
+    bg: "#F7E5E0",
+    ink: "#9E3D2B",
+    icon: "#C8553D",
+    title: "Abgesagt",
+  },
+  pending: {
+    Icon: HelpRoundedIcon,
+    bg: "#FBF0D6",
+    ink: "#8A6A12",
+    icon: "#D9A406",
+    title: "Keine Antwort",
+  },
 } as const;
 
-function ParticipationChip({
-  memberId,
-  name,
-  status,
-}: {
-  memberId: string;
-  name: string;
-  status: Status;
-}) {
-  const color = useMemberColor(memberId);
-  const { Icon, color: statusColor, title } = STATUS[status];
+function ParticipationChip({ name, status }: { name: string; status: Status }) {
+  const { Icon, bg, ink, icon, title } = STATUS[status];
   return (
     <Box
       component="span"
@@ -38,15 +47,14 @@ function ParticipationChip({
         pr: 1,
         py: 0.25,
         borderRadius: 9,
-        bgcolor: color.soft,
-        color: color.ink,
+        bgcolor: bg,
+        color: ink,
         fontSize: "0.8125rem",
         fontWeight: 600,
         lineHeight: 1.6,
-        opacity: status === "pending" ? 0.65 : 1,
       }}
     >
-      <Icon sx={{ fontSize: 16, color: statusColor }} />
+      <Icon sx={{ fontSize: 16, color: icon }} />
       {name}
     </Box>
   );
@@ -54,7 +62,7 @@ function ParticipationChip({
 
 /**
  * One chip per active member showing their RSVP state: confirmed (green check),
- * denied (red cross) or no answer yet (muted question mark).
+ * denied (red cross) or no answer yet (yellow question mark).
  */
 export function ParticipationChips({ rsvps }: { rsvps: MeetingRsvp[] }) {
   const members = useMembers();
@@ -66,14 +74,7 @@ export function ParticipationChips({ rsvps }: { rsvps: MeetingRsvp[] }) {
       {list.map((m) => {
         const v = byMember.get(m.id);
         const status: Status = v === "yes" ? "yes" : v === "no" ? "no" : "pending";
-        return (
-          <ParticipationChip
-            key={m.id}
-            memberId={m.id}
-            name={m.displayName}
-            status={status}
-          />
-        );
+        return <ParticipationChip key={m.id} name={m.displayName} status={status} />;
       })}
     </Stack>
   );

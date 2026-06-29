@@ -1,5 +1,7 @@
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import CalendarMonthRoundedIcon from "@mui/icons-material/CalendarMonthRounded";
+import CancelRoundedIcon from "@mui/icons-material/CancelRounded";
+import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import RepeatRoundedIcon from "@mui/icons-material/RepeatRounded";
@@ -215,17 +217,18 @@ export function MeetingDetail() {
           <Stack direction="row" spacing={1}>
             <Button
               fullWidth
+              color="success"
+              startIcon={<CheckCircleRoundedIcon />}
               variant={myRsvp === "yes" ? "contained" : "outlined"}
-              disabled={myRsvp === "yes"}
               onClick={() => rsvp.mutate({ id, body: { value: "yes" } })}
             >
               Ja
             </Button>
             <Button
               fullWidth
+              color="error"
+              startIcon={<CancelRoundedIcon />}
               variant={myRsvp === "no" ? "contained" : "outlined"}
-              color="inherit"
-              disabled={myRsvp === "no"}
               onClick={() => rsvp.mutate({ id, body: { value: "no" } })}
             >
               Nein

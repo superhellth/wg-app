@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { useMeetings } from "../api/meetings.js";
 import { AddFab } from "../components/Fab.js";
 import { EmptyState } from "../components/EmptyState.js";
+import { ParticipationChips } from "../components/ParticipationChips.js";
 import { formatDateTime } from "../lib/format.js";
 
 const MODE = {
@@ -46,6 +47,11 @@ export function Termine() {
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                     {m.startsAt ? formatDateTime(m.startsAt) : "Noch kein Termin — abstimmen"}
                   </Typography>
+                  {m.startsAt && (
+                    <Box sx={{ mt: 1.5 }}>
+                      <ParticipationChips rsvps={m.rsvps} />
+                    </Box>
+                  )}
                 </CardActionArea>
               </Card>
             );

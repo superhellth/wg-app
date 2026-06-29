@@ -32,9 +32,11 @@ export interface MeetingDetail {
   rsvps: MeetingRsvp[];
   votes: MeetingVote[];
 }
+/** List item carries rsvps so cards can show participation without a detail fetch. */
+export type MeetingListItem = Meeting & { rsvps: MeetingRsvp[] };
 
 export const meetingsApi = {
-  list: () => http<Meeting[]>("/api/meetings"),
+  list: () => http<MeetingListItem[]>("/api/meetings"),
   get: (id: string) => http<MeetingDetail>(`/api/meetings/${id}`),
   create: (body: CreateMeeting) =>
     http<Meeting>("/api/meetings", { method: "POST", body: JSON.stringify(body) }),

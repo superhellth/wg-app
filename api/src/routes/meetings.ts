@@ -16,9 +16,25 @@ import { sendPushToAllMembers } from "../lib/push.js";
 import { requireMember } from "../plugins/auth.js";
 
 export async function meetingsRoutes(app: FastifyInstance) {
-  app.get("/", async () =>
-    db.select().from(schema.meetings).orderBy(desc(schema.meetings.createdAt)),
-  );
+  app.get("/", async () => {
+    const meetings = await db
+      .select()
+      .from(schema.meetings)
+      .orderBy(desc(schema.meetings.createdAt));
+    if (meetings.length === 0) return [];
+    // Attach rsvps so the list can show participation without N detail fetches.
+    const rsvps = await db
+      .select()
+      .from(schema.meetingRsvps)
+      .where(inArray(schema.meetingRsvps.meetingId, meetings.map((m) => m.id)));
+    const byMeeting = new Map<string, typeof rsvps>();
+    for (const r of rsvps) {
+      const arr = byMeeting.get(r.meetingId) ?? [];
+      arr.push(r);
+      byMeeting.set(r.meetingId, arr);
+    }
+    return meetings.map((m) => ({ ...m, rsvps: byMeeting.get(m.id) ?? [] }));
+  });
 
   app.get("/:id", async (req) => {
     const { id } = parse(idParamSchema, req.params);
