@@ -3,6 +3,7 @@ import type {
   Meeting,
   ResolvePoll,
   Rsvp,
+  UpdateMeeting,
   Vote,
 } from "@wg/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -37,6 +38,11 @@ export const meetingsApi = {
   get: (id: string) => http<MeetingDetail>(`/api/meetings/${id}`),
   create: (body: CreateMeeting) =>
     http<Meeting>("/api/meetings", { method: "POST", body: JSON.stringify(body) }),
+  update: (id: string, body: UpdateMeeting) =>
+    http<Meeting>(`/api/meetings/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
   resolve: (id: string, body: ResolvePoll) =>
     http<Meeting>(`/api/meetings/${id}/resolve`, {
       method: "POST",
@@ -83,6 +89,18 @@ function useMeetingMutation<V>(fn: (v: V) => Promise<unknown>) {
 }
 
 export const useCreateMeeting = () => useMeetingMutation(meetingsApi.create);
+export function useUpdateMeeting() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: UpdateMeeting }) =>
+      meetingsApi.update(id, body),
+    onSuccess: (_d, { id }) => {
+      qc.invalidateQueries({ queryKey: qk.meetings });
+      qc.invalidateQueries({ queryKey: qk.meeting(id) });
+      qc.invalidateQueries({ queryKey: qk.activity });
+    },
+  });
+}
 export const useResolvePoll = () =>
   useMeetingMutation(({ id, body }: { id: string; body: ResolvePoll }) =>
     meetingsApi.resolve(id, body),

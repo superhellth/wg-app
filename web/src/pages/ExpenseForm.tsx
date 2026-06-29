@@ -23,6 +23,7 @@ import {
   useUpdateExpense,
 } from "../api/expenses.js";
 import { useMembers } from "../api/members.js";
+import { useConfirm } from "../components/ConfirmDialog.js";
 import { MemberAvatar } from "../components/MemberAvatar.js";
 import { MoneyText } from "../components/MoneyText.js";
 import { SectionLabel } from "../components/SectionLabel.js";
@@ -46,6 +47,7 @@ export function ExpenseForm() {
   const create = useCreateExpense();
   const update = useUpdateExpense();
   const remove = useDeleteExpense();
+  const confirm = useConfirm();
   const detail = useExpense(id);
 
   const shoppingItemIds = useMemo(() => {
@@ -147,9 +149,15 @@ export function ExpenseForm() {
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!id) return;
-    if (!window.confirm("Diese Ausgabe wirklich löschen?")) return;
+    const ok = await confirm({
+      title: "Ausgabe löschen?",
+      body: "Diese Ausgabe wirklich löschen?",
+      confirmLabel: "Löschen",
+      confirmColor: "error",
+    });
+    if (!ok) return;
     remove.mutate(id, { onSuccess: () => navigate("/geld", { replace: true }) });
   };
 

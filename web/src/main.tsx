@@ -5,6 +5,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { Navigate, RouterProvider, createBrowserRouter } from "react-router-dom";
 import { AppShell } from "./app/AppShell.js";
+import { ConfirmProvider } from "./components/ConfirmDialog.js";
 import { PublicOnly, RequireIdentity, RequireToken } from "./app/guards.js";
 import { CreateWg } from "./pages/onboarding/CreateWg.js";
 import { IdentityPicker } from "./pages/onboarding/IdentityPicker.js";
@@ -63,6 +64,7 @@ const router = createBrowserRouter([
           { path: "/termine", element: <Termine /> },
           { path: "/termine/neu", element: <MeetingForm /> },
           { path: "/termine/:id", element: <MeetingDetail /> },
+          { path: "/termine/:id/bearbeiten", element: <MeetingForm /> },
           { path: "/fixkosten", element: <Fixkosten /> },
           { path: "/mitbewohner", element: <Mitbewohner /> },
           { path: "/profil", element: <Profil /> },
@@ -80,7 +82,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <RouterProvider router={router} />
+        <ConfirmProvider>
+          <RouterProvider router={router} />
+        </ConfirmProvider>
       </ThemeProvider>
     </QueryClientProvider>
   </React.StrictMode>,

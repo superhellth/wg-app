@@ -1,5 +1,6 @@
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
@@ -24,6 +25,7 @@ import {
   useUnvote,
   useVote,
 } from "../api/meetings.js";
+import { useConfirm } from "../components/ConfirmDialog.js";
 import { MemberChip } from "../components/MemberChip.js";
 import { SectionLabel } from "../components/SectionLabel.js";
 import { formatDateTime } from "../lib/format.js";
@@ -38,10 +40,17 @@ export function MeetingDetail() {
   const resolve = useResolvePoll();
   const rsvp = useRsvp();
   const del = useDeleteMeeting();
+  const confirm = useConfirm();
   const [resolveOpen, setResolveOpen] = useState(false);
 
-  const handleDelete = () => {
-    if (!window.confirm("Diesen Termin wirklich löschen?")) return;
+  const handleDelete = async () => {
+    const ok = await confirm({
+      title: "Termin löschen?",
+      body: "Diesen Termin wirklich löschen?",
+      confirmLabel: "Löschen",
+      confirmColor: "error",
+    });
+    if (!ok) return;
     del.mutate(id, { onSuccess: () => navigate("/termine", { replace: true }) });
   };
 
@@ -62,6 +71,9 @@ export function MeetingDetail() {
           <ArrowBackRoundedIcon />
         </IconButton>
         <Typography variant="h5" sx={{ flex: 1 }}>{meeting.title}</Typography>
+        <IconButton onClick={() => navigate(`/termine/${id}/bearbeiten`)}>
+          <EditRoundedIcon />
+        </IconButton>
         <IconButton onClick={handleDelete} disabled={del.isPending}>
           <DeleteOutlineRoundedIcon />
         </IconButton>

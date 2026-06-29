@@ -3,13 +3,14 @@ import {
   idParamSchema,
   resolvePollSchema,
   rsvpSchema,
+  updateMeetingSchema,
   voteSchema,
 } from "@wg/shared";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db/client.js";
 import { logActivity } from "../lib/activity.js";
-import { NotFoundError } from "../lib/errors.js";
+import { BadRequestError, NotFoundError } from "../lib/errors.js";
 import { parse } from "../lib/parse.js";
 import { sendPushToAllMembers } from "../lib/push.js";
 import { requireMember } from "../plugins/auth.js";
@@ -85,6 +86,51 @@ export async function meetingsRoutes(app: FastifyInstance) {
       actor.id,
     );
     return reply.status(201).send(created);
+  });
+
+  // Edit a meeting's value fields. Mode is immutable; for poll meetings only
+  // the title changes (time is decided via /resolve).
+  app.put("/:id", async (req) => {
+    const actor = requireMember(req);
+    const { id } = parse(idParamSchema, req.params);
+    const body = parse(updateMeetingSchema, req.body);
+    return db.transaction(async (tx) => {
+      const [before] = await tx
+        .select()
+        .from(schema.meetings)
+        .where(eq(schema.meetings.id, id));
+      if (!before) throw new NotFoundError("meeting not found");
+
+      const isPoll = before.mode === "poll" && !before.startsAt;
+      // An unresolved poll has no fixed time yet — only the title is editable.
+      const startsAt = isPoll
+        ? before.startsAt
+        : body.startsAt
+          ? new Date(body.startsAt)
+          : null;
+      if (!isPoll && !startsAt) {
+        throw new BadRequestError("startsAt required for fixed/recurring meetings");
+      }
+      const recurEveryDays =
+        before.mode === "recurring"
+          ? (body.recurEveryDays ?? before.recurEveryDays)
+          : before.recurEveryDays;
+      if (before.mode === "recurring" && !recurEveryDays) {
+        throw new BadRequestError("recurEveryDays required for recurring meetings");
+      }
+
+      const [after] = await tx
+        .update(schema.meetings)
+        .set({ title: body.title, startsAt, recurEveryDays })
+        .where(eq(schema.meetings.id, id))
+        .returning();
+      await logActivity(tx, {
+        memberId: actor.id,
+        kind: "meeting.updated",
+        data: { before, after },
+      });
+      return after!;
+    });
   });
 
   // Hard-delete a meeting and everything attached (options, votes, rsvps).

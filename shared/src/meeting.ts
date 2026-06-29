@@ -42,6 +42,19 @@ export const createMeetingSchema = z
   });
 export type CreateMeeting = z.infer<typeof createMeetingSchema>;
 
+/**
+ * Edit an existing meeting. Mode is immutable (changing it would mean
+ * restructuring options/votes), so only the value fields are editable.
+ * For poll meetings only `title` applies; the route ignores the rest until
+ * the poll is resolved. Server validates against the existing mode.
+ */
+export const updateMeetingSchema = z.object({
+  title: z.string().min(1).max(120),
+  startsAt: z.string().datetime({ offset: true }).nullable().optional(),
+  recurEveryDays: z.number().int().positive().nullable().optional(),
+});
+export type UpdateMeeting = z.infer<typeof updateMeetingSchema>;
+
 export const meetingSchema = z.object({
   id: uuid,
   title: z.string(),

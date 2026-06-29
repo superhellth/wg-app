@@ -60,17 +60,19 @@ export function Putzplan() {
                 </Stack>
 
                 {turn ? (
-                  <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mt: 1.5 }}>
-                    <MemberAvatar memberId={turn.assigneeId} size={32} />
-                    <Box sx={{ flex: 1 }}>
-                      <Typography sx={{ fontWeight: 600 }}>
-                        {members.get(turn.assigneeId)?.displayName ?? "—"}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Fällig {dayjs(turn.dueAt).format("dd, DD.MM.")}
-                      </Typography>
-                    </Box>
-                    <Stack direction="row" spacing={1}>
+                  <Box sx={{ mt: 1.5 }}>
+                    <Stack direction="row" alignItems="center" spacing={1.5}>
+                      <MemberAvatar memberId={turn.assigneeId} size={32} />
+                      <Box sx={{ flex: 1 }}>
+                        <Typography sx={{ fontWeight: 600 }}>
+                          {members.get(turn.assigneeId)?.displayName ?? "—"}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Fällig {dayjs(turn.dueAt).format("dd, DD.MM.")}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                    <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 1.5 }}>
                       <Button size="small" onClick={() => skip.mutate(c.id)}>
                         Überspringen
                       </Button>
@@ -78,7 +80,7 @@ export function Putzplan() {
                         Erledigt
                       </Button>
                     </Stack>
-                  </Stack>
+                  </Box>
                 ) : (
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                     Keine offene Runde.

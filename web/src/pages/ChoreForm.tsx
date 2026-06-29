@@ -23,6 +23,7 @@ import {
   useUpdateChore,
 } from "../api/chores.js";
 import { useMembers } from "../api/members.js";
+import { useConfirm } from "../components/ConfirmDialog.js";
 import { MemberAvatar } from "../components/MemberAvatar.js";
 import { SectionLabel } from "../components/SectionLabel.js";
 
@@ -40,6 +41,7 @@ export function ChoreForm() {
   const create = useCreateChore();
   const update = useUpdateChore();
   const remove = useDeleteChore();
+  const confirm = useConfirm();
   const chores = useChores();
   const existing = editing ? chores.data?.find((c) => c.id === id) : undefined;
 
@@ -117,9 +119,15 @@ export function ChoreForm() {
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!id) return;
-    if (!window.confirm("Diese Aufgabe wirklich löschen?")) return;
+    const ok = await confirm({
+      title: "Aufgabe löschen?",
+      body: "Diese Aufgabe wirklich löschen?",
+      confirmLabel: "Löschen",
+      confirmColor: "error",
+    });
+    if (!ok) return;
     remove.mutate(id, { onSuccess: () => navigate("/putzplan", { replace: true }) });
   };
 

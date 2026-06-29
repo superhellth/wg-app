@@ -13,11 +13,15 @@ import Typography from "@mui/material/Typography";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
-import type { CreateMeeting, MeetingMode } from "@wg/shared";
+import type { CreateMeeting, MeetingMode, UpdateMeeting } from "@wg/shared";
 import dayjs, { type Dayjs } from "dayjs";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useCreateMeeting } from "../api/meetings.js";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  useCreateMeeting,
+  useMeeting,
+  useUpdateMeeting,
+} from "../api/meetings.js";
 import { SectionLabel } from "../components/SectionLabel.js";
 
 const MODES: { value: MeetingMode; label: string }[] = [
@@ -28,7 +32,11 @@ const MODES: { value: MeetingMode; label: string }[] = [
 
 export function MeetingForm() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEdit = Boolean(id);
   const create = useCreateMeeting();
+  const update = useUpdateMeeting();
+  const existing = useMeeting(id);
 
   const [title, setTitle] = useState("");
   const [mode, setMode] = useState<MeetingMode>("fixed");
@@ -39,15 +47,44 @@ export function MeetingForm() {
     dayjs().add(2, "day").hour(19).minute(0),
   ]);
 
+  // Prefill from the existing meeting when editing.
+  const meeting = existing.data?.meeting;
+  useEffect(() => {
+    if (!isEdit || !meeting) return;
+    setTitle(meeting.title);
+    setMode(meeting.mode);
+    if (meeting.startsAt) setStartsAt(dayjs(meeting.startsAt));
+    if (meeting.recurEveryDays) setRecurEveryDays(String(meeting.recurEveryDays));
+  }, [isEdit, meeting]);
+
+  // An unresolved poll has no fixed time yet — only the title is editable.
+  const isUnresolvedPoll = mode === "poll" && !meeting?.startsAt;
+  const editableTimeFields = !isEdit || !isUnresolvedPoll;
+
+  const pending = create.isPending || update.isPending;
   const valid =
     title.trim() &&
-    (mode === "poll"
-      ? options.filter(Boolean).length >= 2
-      : Boolean(startsAt)) &&
+    (isEdit
+      ? isUnresolvedPoll || Boolean(startsAt)
+      : mode === "poll"
+        ? options.filter(Boolean).length >= 2
+        : Boolean(startsAt)) &&
     (mode !== "recurring" || Number(recurEveryDays) > 0) &&
-    !create.isPending;
+    !pending;
 
   const submit = () => {
+    if (isEdit) {
+      const body: UpdateMeeting = {
+        title: title.trim(),
+        ...(isUnresolvedPoll ? {} : { startsAt: startsAt!.toISOString() }),
+        ...(mode === "recurring" ? { recurEveryDays: Number(recurEveryDays) } : {}),
+      };
+      update.mutate(
+        { id: id!, body },
+        { onSuccess: () => navigate(`/termine/${id}`, { replace: true }) },
+      );
+      return;
+    }
     const body: CreateMeeting = {
       title: title.trim(),
       mode,
@@ -59,6 +96,8 @@ export function MeetingForm() {
     create.mutate(body, { onSuccess: () => navigate("/termine", { replace: true }) });
   };
 
+  if (isEdit && !meeting) return <Box sx={{ p: 2 }}>Lädt…</Box>;
+
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="de">
       <Box sx={{ p: 2, pb: 4 }}>
@@ -66,7 +105,7 @@ export function MeetingForm() {
           <IconButton edge="start" onClick={() => navigate(-1)}>
             <ArrowBackRoundedIcon />
           </IconButton>
-          <Typography variant="h5">Neuer Termin</Typography>
+          <Typography variant="h5">{isEdit ? "Termin bearbeiten" : "Neuer Termin"}</Typography>
         </Stack>
 
         <Stack spacing={2.5}>
@@ -87,6 +126,7 @@ export function MeetingForm() {
               onChange={(_, v) => v && setMode(v)}
               fullWidth
               size="small"
+              disabled={isEdit}
             >
               {MODES.map((m) => (
                 <ToggleButton key={m.value} value={m.value}>{m.label}</ToggleButton>
@@ -113,7 +153,14 @@ export function MeetingForm() {
             />
           )}
 
-          {mode === "poll" && (
+          {mode === "poll" && !editableTimeFields && (
+            <Typography variant="body2" color="text.secondary">
+              Die Vorschläge einer Umfrage lassen sich nicht ändern. Lege die Zeit
+              fest oder erstelle eine neue Umfrage.
+            </Typography>
+          )}
+
+          {mode === "poll" && editableTimeFields && !isEdit && (
             <Box>
               <SectionLabel>Vorschläge</SectionLabel>
               <Stack spacing={1.5}>
@@ -150,7 +197,11 @@ export function MeetingForm() {
 
           <Divider />
           <Button variant="contained" size="large" disabled={!valid} onClick={submit}>
-            {create.isPending ? "Wird erstellt…" : "Termin erstellen"}
+            {pending
+              ? "Wird gespeichert…"
+              : isEdit
+                ? "Speichern"
+                : "Termin erstellen"}
           </Button>
         </Stack>
       </Box>
