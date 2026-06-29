@@ -133,7 +133,7 @@ export function Geld() {
               ))}
             </Stack>
           ) : (
-            <EmptyState title="Noch keine Ausgaben" hint="Erfasse die erste mit dem +." />
+            <EmptyState title="Noch keine Ausgaben" hint="Erfasse die erste mit dem +" />
           )}
         </Box>
       </Stack>
