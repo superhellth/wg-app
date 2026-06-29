@@ -1,9 +1,9 @@
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import NotificationsActiveRoundedIcon from "@mui/icons-material/NotificationsActiveRounded";
+import ScheduleRoundedIcon from "@mui/icons-material/ScheduleRounded";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
-import Chip from "@mui/material/Chip";
 import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -58,38 +58,62 @@ export function Putzplan() {
             const turn = c.currentTurn;
             const overdue = turn && dayjs(turn.dueAt).isBefore(dayjs());
             return (
-              <Card key={c.id} sx={{ p: 2 }}>
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Typography variant="h6" sx={{ flex: 1 }}>{c.name}</Typography>
-                  {overdue && <Chip label="Überfällig" color="error" size="small" />}
-                  <IconButton
-                    size="small"
-                    aria-label="Erinnern"
-                    disabled={!turn}
-                    onClick={() => remind.mutate(c.id)}
-                  >
-                    <NotificationsActiveRoundedIcon />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    aria-label="Bearbeiten"
-                    onClick={() => navigate(`/putzplan/${c.id}/bearbeiten`)}
-                  >
-                    <EditRoundedIcon />
-                  </IconButton>
+              <Card
+                key={c.id}
+                sx={{
+                  p: 2,
+                  borderLeft: overdue ? "3px solid" : "3px solid transparent",
+                  borderLeftColor: overdue ? "error.main" : "transparent",
+                }}
+              >
+                <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                    {c.name}
+                  </Typography>
+                  <Stack direction="row" spacing={0.5} sx={{ mt: -0.5, mr: -0.5 }}>
+                    <IconButton
+                      size="small"
+                      aria-label="Erinnern"
+                      disabled={!turn}
+                      onClick={() => remind.mutate(c.id)}
+                      sx={{ color: "text.disabled" }}
+                    >
+                      <NotificationsActiveRoundedIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      aria-label="Bearbeiten"
+                      onClick={() => navigate(`/putzplan/${c.id}/bearbeiten`)}
+                      sx={{ color: "text.disabled" }}
+                    >
+                      <EditRoundedIcon fontSize="small" />
+                    </IconButton>
+                  </Stack>
                 </Stack>
 
                 {turn ? (
-                  <Box sx={{ mt: 1.5 }}>
-                    <Stack direction="row" alignItems="center" spacing={1.5}>
-                      <MemberAvatar memberId={turn.assigneeId} size={32} />
-                      <Box sx={{ flex: 1 }}>
-                        <Typography sx={{ fontWeight: 600 }}>
+                  <>
+                    <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mt: 0.5 }}>
+                      <MemberAvatar memberId={turn.assigneeId} size={44} />
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
                           {members.get(turn.assigneeId)?.displayName ?? "—"}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          Fällig {formatDate(turn.dueAt)}
-                        </Typography>
+                        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mt: 0.25 }}>
+                          <ScheduleRoundedIcon
+                            sx={{ fontSize: 15, color: overdue ? "error.main" : "text.secondary" }}
+                          />
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: overdue ? "error.main" : "text.secondary",
+                              fontWeight: overdue ? 700 : 400,
+                            }}
+                          >
+                            {overdue ? "Überfällig · " : "Fällig "}
+                            {formatDate(turn.dueAt)}
+                          </Typography>
+                        </Stack>
                       </Box>
                     </Stack>
                     <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 1.5 }}>
@@ -100,7 +124,7 @@ export function Putzplan() {
                         Erledigt
                       </Button>
                     </Stack>
-                  </Box>
+                  </>
                 ) : (
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                     Keine offene Runde.

@@ -7,7 +7,6 @@ import Card from "@mui/material/Card";
 import CardActionArea from "@mui/material/CardActionArea";
 import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
-import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import dayjs from "dayjs";
@@ -107,23 +106,27 @@ export function Start() {
         <Card sx={{ p: 2.5 }}>
           <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
             <SectionLabel>Nächster Termin</SectionLabel>
-            <Stack direction="row" spacing={0.5} sx={{ mt: -0.5 }}>
-              <IconButton
+            <Stack direction="row" spacing={1} sx={{ mt: -0.5 }}>
+              <Button
                 size="small"
+                color="success"
                 aria-label="Zusagen"
+                variant={myRsvp === "yes" ? "contained" : "outlined"}
                 onClick={() => rsvp.mutate({ id: nextMeeting.id, body: { value: "yes" } })}
-                sx={{ color: myRsvp === "yes" ? "#0E8A5F" : "text.disabled" }}
+                sx={{ minWidth: 0, px: 1 }}
               >
-                <CheckCircleRoundedIcon />
-              </IconButton>
-              <IconButton
+                <CheckCircleRoundedIcon fontSize="small" />
+              </Button>
+              <Button
                 size="small"
+                color="error"
                 aria-label="Absagen"
+                variant={myRsvp === "no" ? "contained" : "outlined"}
                 onClick={() => rsvp.mutate({ id: nextMeeting.id, body: { value: "no" } })}
-                sx={{ color: myRsvp === "no" ? "#C8553D" : "text.disabled" }}
+                sx={{ minWidth: 0, px: 1 }}
               >
-                <CancelRoundedIcon />
-              </IconButton>
+                <CancelRoundedIcon fontSize="small" />
+              </Button>
             </Stack>
           </Stack>
           <Typography variant="h6">{nextMeeting.title}</Typography>

@@ -5,6 +5,7 @@ import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import CardActionArea from "@mui/material/CardActionArea";
 import Chip from "@mui/material/Chip";
+import Divider from "@mui/material/Divider";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import dayjs from "dayjs";
@@ -48,9 +49,10 @@ export function Termine() {
                     {m.startsAt ? formatDateTime(m.startsAt) : "Noch kein Termin — abstimmen"}
                   </Typography>
                   {m.startsAt && (
-                    <Box sx={{ mt: 1.5 }}>
+                    <>
+                      <Divider sx={{ my: 1.5 }} />
                       <ParticipationChips rsvps={m.rsvps} />
-                    </Box>
+                    </>
                   )}
                 </CardActionArea>
               </Card>

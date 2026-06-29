@@ -81,6 +81,31 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  # Nightly Postgres backup → Cloudflare R2. Dockerized in place of a host
+  # rclone+systemd setup: it sleeps until BACKUP_HOUR:BACKUP_MINUTE, dumps to the
+  # USB SSD (/mnt/data/backups) and uploads to R2. The R2 remote is built from the
+  # RCLONE_CONFIG_R2_* env vars — no interactive `rclone config`.
+  backup:
+    build:
+      context: ./backup
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://wg:${POSTGRES_PASSWORD}@db:5432/wg
+      BACKUP_HOUR: "3"
+      BACKUP_MINUTE: "30"
+      BACKUP_KEEP: "14"
+      R2_BUCKET: ${R2_BUCKET}
+      RCLONE_CONFIG_R2_TYPE: s3
+      RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+      RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
+      RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
+      RCLONE_CONFIG_R2_ENDPOINT: ${R2_ENDPOINT}
+    volumes:
+      - /mnt/data/backups:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+
   # Physical display: 16x2 I2C LCD + 4 GPIO buttons. Reads config + content from
   # the api and drives the screen. Needs host GPIO/I2C access (privileged), so
   # enable the I2C interface on the Pi first (raspi-config / dtparam=i2c_arm=on).

@@ -15,11 +15,12 @@ Everything runs as containers — no host-level Node/Postgres/Caddy installs.
    │  cloudflared → caddy:80       │  caddy: static PWA + /api proxy
    │  caddy /api/* → api:3000      │  api:   Fastify
    │  worker (cron)                │  worker: time-based push
+   │  backup (cron → R2)           │  backup: nightly pg_dump → R2
    │  api/worker → db:5432         │  db:    postgres (data on USB SSD)
    └───────────────────────────────┘
 ```
 
-Compose services: `db`, `migrate` (one-shot), `api`, `worker`, `caddy`, `cloudflared`.
+Compose services: `db`, `migrate` (one-shot), `api`, `worker`, `backup`, `caddy`, `cloudflared`.
 
 ---
 
@@ -154,57 +155,45 @@ port-forwarding, no exposed home IP.
 
 ## 6. Backups → Cloudflare R2
 
-### 6.1 rclone remote (on the host)
-```bash
-sudo apt install -y rclone
-rclone config        # type: S3 → provider Cloudflare; R2 keys + endpoint; name it "r2"
-```
+Backups run as a **dockerized `backup` service** (`backup/` in the repo) — no host
+`rclone` install, no `rclone config`, no systemd. The container sleeps until
+`BACKUP_HOUR:BACKUP_MINUTE` (default 03:30 Europe/Berlin), runs `pg_dump` to the
+USB SSD (`/mnt/data/backups`), and uploads to R2 with `rclone`. The R2 remote is
+built from `RCLONE_CONFIG_R2_*` env vars, so it's fully declarative.
 
-### 6.2 Backup script — `scripts/backup.sh`
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-STAMP=$(date +%Y%m%d-%H%M%S)
-OUT="/mnt/data/backups/wg-$STAMP.sql.gz"
-# dump from inside the db container
-docker compose -f /opt/wg-app/docker-compose.yml exec -T db \
-  pg_dump -U wg wg | gzip > "$OUT"
-rclone copy "$OUT" r2:wg-backups/
-ls -1t /mnt/data/backups/wg-*.sql.gz | tail -n +15 | xargs -r rm --   # keep 14
-```
-```bash
-chmod +x /opt/wg-app/scripts/backup.sh
-```
+### 6.1 Configure R2
+1. Cloudflare → **R2** → create a bucket (e.g. `wg-backups`).
+2. **R2 → Manage API Tokens** → create a token with **Object Read & Write**.
+3. Fill the backup vars in **`.env`** (repo root):
+   ```bash
+   R2_BUCKET=wg-backups
+   R2_ACCESS_KEY_ID=<token access key id>
+   R2_SECRET_ACCESS_KEY=<token secret>
+   R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+   ```
+   The endpoint is on the bucket's **Settings → S3 API** page.
 
-### 6.3 Nightly systemd timer (host)
-The only host-level systemd unit — everything else is Docker.
-`sudo nano /etc/systemd/system/wg-backup.service`:
-```ini
-[Unit]
-Description=WG App nightly DB backup
-[Service]
-Type=oneshot
-ExecStart=/opt/wg-app/scripts/backup.sh
-```
-`sudo nano /etc/systemd/system/wg-backup.timer`:
-```ini
-[Unit]
-Description=Run WG backup nightly
-[Timer]
-OnCalendar=*-*-* 03:30:00
-Persistent=true
-[Install]
-WantedBy=timers.target
-```
+### 6.2 Run it
+It comes up with the rest of the stack:
 ```bash
-sudo systemctl daemon-reload && sudo systemctl enable --now wg-backup.timer
-sudo systemctl start wg-backup.service   # test once
+docker compose up -d backup
+docker compose logs -f backup            # shows "next run in …s"
+```
+Tune the schedule/retention via the service's env in `docker-compose.yml`
+(`BACKUP_HOUR`, `BACKUP_MINUTE`, `BACKUP_KEEP`). To take a backup immediately
+(e.g. to verify R2 works):
+```bash
+docker compose run --rm -e BACKUP_ON_START=true backup
 ```
 
 **Restore:**
 ```bash
-gunzip -c wg-YYYYMMDD-HHMMSS.sql.gz | \
-  docker compose exec -T db psql -U wg -d wg
+# from a local dump on the SSD
+gunzip -c /mnt/data/backups/wg-YYYYMMDD-HHMMSS.sql.gz \
+  | docker compose exec -T db psql -U wg -d wg
+
+# or pull one from R2 first
+docker compose exec -T backup rclone copy r2:wg-backups/wg-YYYYMMDD-HHMMSS.sql.gz /backups/
 ```
 
 ---
@@ -245,7 +234,7 @@ The PWA auto-updates on clients (Workbox `autoUpdate`) on next load. To free spa
 | API + proxy | `curl http://127.0.0.1/api/health` |
 | Public reachable | open `https://wg.yourdomain.com` |
 | Tunnel up | `docker compose logs cloudflared` |
-| Backup timer | `systemctl list-timers wg-backup.timer` |
+| Backups | `docker compose logs backup` (shows next run); `ls /mnt/data/backups` |
 | Logs | `docker compose logs -f api worker` |
 
 ---
