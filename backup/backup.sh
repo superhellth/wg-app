@@ -9,8 +9,6 @@ set -eu
 
 : "${BACKUP_HOUR:=3}"        # local hour to run (TZ from the image, Europe/Berlin)
 : "${BACKUP_MINUTE:=30}"
-: "${BACKUP_KEEP:=14}"       # how many local dumps to retain on the SSD
-: "${BACKUP_DIR:=/backups}"
 : "${BACKUP_ON_START:=false}" # run once immediately (handy to test)
 : "${R2_BUCKET:?R2_BUCKET is required}"
 : "${DATABASE_URL:?DATABASE_URL is required}"
@@ -18,13 +16,10 @@ set -eu
 run_backup() {
   stamp=$(date +%Y%m%d-%H%M%S)
   file="wg-$stamp.sql.gz"
-  echo "[backup] $(date -Iseconds) dumping $file"
-  pg_dump "$DATABASE_URL" | gzip >"$BACKUP_DIR/$file"
-  echo "[backup] uploading to r2:$R2_BUCKET"
-  rclone copy "$BACKUP_DIR/$file" "r2:$R2_BUCKET/"
-  # Local retention; R2 lifecycle rules can prune the remote side if you want.
-  ls -1t "$BACKUP_DIR"/wg-*.sql.gz 2>/dev/null \
-    | tail -n +$((BACKUP_KEEP + 1)) | xargs -r rm --
+  echo "[backup] $(date -Iseconds) streaming $file → r2:$R2_BUCKET"
+  # Stream straight to R2 — no local file, no disk on the Pi. rcat reads stdin.
+  pg_dump "$DATABASE_URL" | gzip | rclone rcat "r2:$R2_BUCKET/$file"
+  # Retention lives on R2 (bucket lifecycle rule), not here.
   echo "[backup] done"
 }
 

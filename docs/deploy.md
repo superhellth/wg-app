@@ -1,8 +1,8 @@
 # WG App — Deployment Guide (Docker)
 
 Deploy the WG app onto a **Raspberry Pi 4 (4 GB)** with **Docker Compose**,
-exposed via **Cloudflare Tunnel**, with **PostgreSQL data on a USB SSD** and
-offsite backups to **Cloudflare R2**.
+exposed via **Cloudflare Tunnel**, with **PostgreSQL data on the SD card** and
+offsite backups streamed to **Cloudflare R2**.
 
 Everything runs as containers — no host-level Node/Postgres/Caddy installs.
 
@@ -15,8 +15,8 @@ Everything runs as containers — no host-level Node/Postgres/Caddy installs.
    │  cloudflared → caddy:80       │  caddy: static PWA + /api proxy
    │  caddy /api/* → api:3000      │  api:   Fastify
    │  worker (cron)                │  worker: time-based push
-   │  backup (cron → R2)           │  backup: nightly pg_dump → R2
-   │  api/worker → db:5432         │  db:    postgres (data on USB SSD)
+   │  backup (cron → R2)           │  backup: nightly pg_dump → R2 (stream)
+   │  api/worker → db:5432         │  db:    postgres (data on SD card)
    └───────────────────────────────┘
 ```
 
@@ -26,7 +26,7 @@ Compose services: `db`, `migrate` (one-shot), `api`, `worker`, `backup`, `caddy`
 
 ## 0. Prerequisites
 
-- Raspberry Pi 4 **(4 GB)**, microSD (boot), **USB SSD** (Postgres data + backups).
+- Raspberry Pi 4 **(4 GB)**, microSD (boot + data; no USB drive needed).
 - A Cloudflare account + a domain on Cloudflare, and an R2 bucket (backups).
 - A dev machine with Docker (for cross-building arm64 images) — optional but
   faster than building on the Pi.
@@ -44,17 +44,12 @@ Compose services: `db`, `migrate` (one-shot), `api`, `worker`, `backup`, `caddy`
    sudo apt update && sudo apt full-upgrade -y && sudo reboot
    ```
 
-### 1.2 Mount the USB SSD for Postgres data
+### 1.2 Create the Postgres data dir
+No USB drive — Postgres data lives on the SD card. The `db` container bind-mounts
+`/mnt/data/pgdata`; create it once (no `fstab`/mount needed):
 ```bash
-lsblk                         # find the device, e.g. /dev/sda
-sudo mkfs.ext4 /dev/sda1      # ⚠️ erases it — pick the right device
-sudo mkdir -p /mnt/data
-sudo blkid /dev/sda1          # copy UUID=...
-echo 'UUID=<your-uuid>  /mnt/data  ext4  defaults,noatime,nofail,x-systemd.device-timeout=10  0  2' | sudo tee -a /etc/fstab
-sudo mount -a
-sudo mkdir -p /mnt/data/pgdata /mnt/data/backups
+sudo mkdir -p /mnt/data/pgdata
 ```
-> `noatime` reduces flash writes. The `db` container bind-mounts `/mnt/data/pgdata`.
 
 ### 1.3 Install Docker
 ```bash
@@ -157,9 +152,10 @@ port-forwarding, no exposed home IP.
 
 Backups run as a **dockerized `backup` service** (`backup/` in the repo) — no host
 `rclone` install, no `rclone config`, no systemd. The container sleeps until
-`BACKUP_HOUR:BACKUP_MINUTE` (default 03:30 Europe/Berlin), runs `pg_dump` to the
-USB SSD (`/mnt/data/backups`), and uploads to R2 with `rclone`. The R2 remote is
-built from `RCLONE_CONFIG_R2_*` env vars, so it's fully declarative.
+`BACKUP_HOUR:BACKUP_MINUTE` (default 03:30 Europe/Berlin) and **streams `pg_dump`
+straight to R2** (`rclone rcat`) — nothing is written to the Pi's disk. The R2
+remote is built from `RCLONE_CONFIG_R2_*` env vars, so it's fully declarative.
+R2 is the only copy; prune old dumps with an **R2 bucket lifecycle rule**.
 
 ### 6.1 Configure R2
 1. Cloudflare → **R2** → create a bucket (e.g. `wg-backups`).
@@ -179,21 +175,21 @@ It comes up with the rest of the stack:
 docker compose up -d backup
 docker compose logs -f backup            # shows "next run in …s"
 ```
-Tune the schedule/retention via the service's env in `docker-compose.yml`
-(`BACKUP_HOUR`, `BACKUP_MINUTE`, `BACKUP_KEEP`). To take a backup immediately
+Tune the schedule via the service's env in `docker-compose.yml`
+(`BACKUP_HOUR`, `BACKUP_MINUTE`). To take a backup immediately
 (e.g. to verify R2 works):
 ```bash
 docker compose run --rm -e BACKUP_ON_START=true backup
 ```
 
-**Restore:**
+**Restore** (pull from R2 and pipe straight into the db):
 ```bash
-# from a local dump on the SSD
-gunzip -c /mnt/data/backups/wg-YYYYMMDD-HHMMSS.sql.gz \
-  | docker compose exec -T db psql -U wg -d wg
+# list available dumps in the bucket
+docker compose exec backup rclone ls r2:wg-backups
 
-# or pull one from R2 first
-docker compose exec -T backup rclone copy r2:wg-backups/wg-YYYYMMDD-HHMMSS.sql.gz /backups/
+# stream a chosen dump from R2 into postgres
+docker compose exec -T backup sh -c 'rclone cat r2:wg-backups/wg-YYYYMMDD-HHMMSS.sql.gz | gunzip' \
+  | docker compose exec -T db psql -U wg -d wg
 ```
 
 ---
@@ -230,11 +226,11 @@ The PWA auto-updates on clients (Workbox `autoUpdate`) on next load. To free spa
 |-------|---------|
 | Containers up | `docker compose ps` |
 | DB healthy | `docker compose exec db pg_isready -U wg` |
-| Data on USB | `ls /mnt/data/pgdata` (non-empty) |
+| DB data dir | `ls /mnt/data/pgdata` (non-empty) |
 | API + proxy | `curl http://127.0.0.1/api/health` |
 | Public reachable | open `https://wg.yourdomain.com` |
 | Tunnel up | `docker compose logs cloudflared` |
-| Backups | `docker compose logs backup` (shows next run); `ls /mnt/data/backups` |
+| Backups | `docker compose logs backup` (shows next run); `docker compose exec backup rclone ls r2:wg-backups` |
 | Logs | `docker compose logs -f api worker` |
 
 ---
@@ -243,11 +239,76 @@ The PWA auto-updates on clients (Workbox `autoUpdate`) on next load. To free spa
 
 - **arm64 images.** Build on the Pi or cross-build with buildx `--platform linux/arm64`.
   x86 images won't run.
-- **Postgres data lives on the USB SSD** (`/mnt/data/pgdata` bind mount). The SD card
-  is disposable; if it dies, reflash, reinstall Docker, `git clone`, `compose up`,
-  and the data on the SSD (plus R2 backups) survives.
+- **Postgres data lives on the SD card** (`/mnt/data/pgdata` bind mount — no USB).
+  The SD card is therefore **not** disposable — the live DB is on it. **R2 is the
+  only off-box copy**, so the nightly backup is the real safety net: if the card
+  dies, reflash, reinstall Docker, `git clone`, `mkdir /mnt/data/pgdata`,
+  `compose up`, then restore the latest dump from R2 (§6.2). To move the DB off the
+  card onto a USB SSD later, see **Appendix A**.
+- **SD-card wear:** the `db` flags trim logging/WAL for flash endurance — keep them.
+  Use a decent A2 card and keep R2 backups current.
 - **Migrations must be committed** before deploy (`pnpm db:generate`). The `migrate`
   container fails fast if `api/drizzle/` is empty.
 - **VAPID keys are permanent.** Regenerating invalidates all push subscriptions.
 - **Push needs the Pi online.** Home outage = missed reminders (accepted per spec).
 - **Memory budget (4 GB):** the whole stack idles around ~0.5–0.7 GB — ample headroom.
+
+---
+
+## Appendix A — Move the DB onto a USB SSD (later)
+
+The `db` container bind-mounts `/mnt/data/pgdata`. Putting a real disk *under*
+`/mnt/data` moves the database off the SD card with **no app/compose/schema change** —
+the bind-mount path stays the same. This is a one-time **data move**, not a Drizzle
+migration (the schema is unchanged).
+
+> ⚠️ The data currently sits at `/mnt/data/pgdata` **on the SD card**. Mounting an
+> empty SSD at `/mnt/data` *shadows* it → Postgres would start empty. Copy the data
+> onto the SSD **first**. Take a dump (`pg_dump` or your latest R2 backup) before
+> starting, regardless of which option you pick.
+
+### Option 1 — rsync the data files (exact 1:1, recommended)
+Same Postgres major version, so the on-disk files are portable.
+```bash
+cd /opt/wg-app && docker compose down        # stop writes
+
+lsblk                                          # find the SSD, e.g. /dev/sda
+sudo mkfs.ext4 /dev/sda1                        # ⚠️ erases it — pick the right device
+sudo mkdir -p /mnt/ssd && sudo mount /dev/sda1 /mnt/ssd
+
+# copy preserving ownership/perms (pg data dir is owned by uid 70)
+sudo rsync -aHAX /mnt/data/ /mnt/ssd/
+ls -la /mnt/ssd/pgdata                          # sanity check
+
+sudo umount /mnt/ssd
+sudo blkid /dev/sda1                            # copy UUID=...
+echo 'UUID=<your-uuid>  /mnt/data  ext4  defaults,noatime,nofail,x-systemd.device-timeout=10  0  2' \
+  | sudo tee -a /etc/fstab
+sudo mount -a
+ls /mnt/data/pgdata                             # now served from the SSD
+
+docker compose up -d
+```
+Use **ext4** (preserves unix perms — not exFAT/FAT). `noatime` cuts writes, `nofail`
+lets the Pi still boot if the drive is absent. The old SD copy is hidden under the
+new mount; reclaim that space later by unmounting, deleting the bare-SD
+`/mnt/data/pgdata`, and remounting (optional).
+
+### Option 2 — dump/restore (clean slate; no file-perm concerns)
+```bash
+docker compose exec -T db pg_dump -U wg -d wg | gzip > ~/wg.sql.gz   # or use the latest R2 dump
+docker compose down
+
+# format + fstab-mount the SSD at /mnt/data (mkfs + UUID steps as above), then:
+sudo mkdir -p /mnt/data/pgdata
+docker compose up -d db                         # empty DB inits on the SSD; wait healthy
+docker compose exec db pg_isready -U wg
+gunzip -c ~/wg.sql.gz | docker compose exec -T db psql -U wg -d wg
+docker compose up -d                            # migrate no-ops, rest starts
+```
+The full dump carries Drizzle's migration journal, so `migrate` only applies any
+genuinely new migrations rather than recreating the schema.
+
+**Rollback (either option):** `docker compose down`, remove the `/etc/fstab` line,
+`sudo umount /mnt/data` → the original SD-card data at `/mnt/data/pgdata` is back.
+`docker compose up -d`.

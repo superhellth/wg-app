@@ -22,6 +22,13 @@
       "when": 1782667149673,
       "tag": "0002_mighty_lenny_balinger",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1782813649167,
+      "tag": "0003_vengeful_natasha_romanoff",
+      "breakpoints": true
     }
   ]
 }

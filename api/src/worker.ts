@@ -1,4 +1,5 @@
 import cron from "node-cron";
+import { runMeetingCleanup } from "./services/cleanup.js";
 import { runChoreOverdue, runMeetingReminders } from "./services/reminders.js";
 
 /**
@@ -21,9 +22,13 @@ cron.schedule("*/5 * * * *", () => runJob("meeting-reminders", runMeetingReminde
 // (now >= dueAt + 24h AND overdue_notified_at IS NULL).
 cron.schedule("0 * * * *", () => runJob("chore-overdue", runChoreOverdue));
 
+// Stale meeting cleanup: hourly, hard-delete fixed meetings >12h past.
+cron.schedule("0 * * * *", () => runJob("meeting-cleanup", runMeetingCleanup));
+
 // Catch up immediately on startup (dedup markers prevent double-sends).
 runJob("meeting-reminders", runMeetingReminders);
 runJob("chore-overdue", runChoreOverdue);
+runJob("meeting-cleanup", runMeetingCleanup);
 
 process.on("SIGTERM", () => process.exit(0));
 process.on("SIGINT", () => process.exit(0));

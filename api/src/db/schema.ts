@@ -151,19 +151,19 @@ export const meetings = pgTable("meetings", {
 
 export const meetingOptions = pgTable("meeting_options", {
   id: uuid("id").primaryKey().defaultRandom(),
-  meetingId: uuid("meeting_id").references(() => meetings.id).notNull(),
+  meetingId: uuid("meeting_id").references(() => meetings.id, { onDelete: "cascade" }).notNull(),
   optionTime: timestamp("option_time", { withTimezone: true }).notNull(),
 });
 
 export const meetingVotes = pgTable("meeting_votes", {
   id: uuid("id").primaryKey().defaultRandom(),
-  optionId: uuid("option_id").references(() => meetingOptions.id).notNull(),
+  optionId: uuid("option_id").references(() => meetingOptions.id, { onDelete: "cascade" }).notNull(),
   memberId: uuid("member_id").references(() => members.id).notNull(),
 });
 
 export const meetingRsvps = pgTable("meeting_rsvps", {
   id: uuid("id").primaryKey().defaultRandom(),
-  meetingId: uuid("meeting_id").references(() => meetings.id).notNull(),
+  meetingId: uuid("meeting_id").references(() => meetings.id, { onDelete: "cascade" }).notNull(),
   memberId: uuid("member_id").references(() => members.id).notNull(),
   value: rsvpEnum("value").notNull(),
 });

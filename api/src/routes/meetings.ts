@@ -149,7 +149,7 @@ export async function meetingsRoutes(app: FastifyInstance) {
     });
   });
 
-  // Hard-delete a meeting and everything attached (options, votes, rsvps).
+  // Hard-delete a meeting. Options, votes and rsvps cascade at the DB level.
   app.delete("/:id", async (req, reply) => {
     const actor = requireMember(req);
     const { id } = parse(idParamSchema, req.params);
@@ -160,20 +160,6 @@ export async function meetingsRoutes(app: FastifyInstance) {
         .where(eq(schema.meetings.id, id));
       if (!before) throw new NotFoundError("meeting not found");
 
-      const options = await tx
-        .select({ id: schema.meetingOptions.id })
-        .from(schema.meetingOptions)
-        .where(eq(schema.meetingOptions.meetingId, id));
-      if (options.length) {
-        await tx.delete(schema.meetingVotes).where(
-          inArray(
-            schema.meetingVotes.optionId,
-            options.map((o) => o.id),
-          ),
-        );
-      }
-      await tx.delete(schema.meetingOptions).where(eq(schema.meetingOptions.meetingId, id));
-      await tx.delete(schema.meetingRsvps).where(eq(schema.meetingRsvps.meetingId, id));
       await tx.delete(schema.meetings).where(eq(schema.meetings.id, id));
 
       await logActivity(tx, {

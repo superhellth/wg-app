@@ -12,7 +12,8 @@ services:
       POSTGRES_USER: wg
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: wg
-    # Postgres data on the USB SSD (SD-wear mitigation). Create /mnt/data/pgdata first.
+    # Postgres data on a host path (SD card; no USB drive on the Pi).
+    # Create /mnt/data/pgdata once: sudo mkdir -p /mnt/data/pgdata
     volumes:
       - /mnt/data/pgdata:/var/lib/postgresql/data
     # Trim logging + WAL footprint for flash endurance.
@@ -82,9 +83,9 @@ services:
         condition: service_completed_successfully
 
   # Nightly Postgres backup → Cloudflare R2. Dockerized in place of a host
-  # rclone+systemd setup: it sleeps until BACKUP_HOUR:BACKUP_MINUTE, dumps to the
-  # USB SSD (/mnt/data/backups) and uploads to R2. The R2 remote is built from the
-  # RCLONE_CONFIG_R2_* env vars — no interactive `rclone config`.
+  # rclone+systemd setup: it sleeps until BACKUP_HOUR:BACKUP_MINUTE and streams
+  # pg_dump straight to R2 (rclone rcat) — no local file. The R2 remote is built
+  # from the RCLONE_CONFIG_R2_* env vars — no interactive `rclone config`.
   backup:
     build:
       context: ./backup
@@ -93,15 +94,12 @@ services:
       DATABASE_URL: postgres://wg:${POSTGRES_PASSWORD}@db:5432/wg
       BACKUP_HOUR: "3"
       BACKUP_MINUTE: "30"
-      BACKUP_KEEP: "14"
       R2_BUCKET: ${R2_BUCKET}
       RCLONE_CONFIG_R2_TYPE: s3
       RCLONE_CONFIG_R2_PROVIDER: Cloudflare
       RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
       RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
       RCLONE_CONFIG_R2_ENDPOINT: ${R2_ENDPOINT}
-    volumes:
-      - /mnt/data/backups:/backups
     depends_on:
       db:
         condition: service_healthy
