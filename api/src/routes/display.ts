@@ -22,6 +22,9 @@ function toConfig(row: ConfigRow): DisplayConfig {
       red: row.buttonRed,
       green: row.buttonGreen,
     },
+    scheduleEnabled: row.scheduleEnabled,
+    onTime: row.onTime,
+    offTime: row.offTime,
   };
 }
 
@@ -52,6 +55,9 @@ export async function displayRoutes(app: FastifyInstance) {
         buttonYellow: body.buttons.yellow,
         buttonRed: body.buttons.red,
         buttonGreen: body.buttons.green,
+        scheduleEnabled: body.scheduleEnabled,
+        onTime: body.onTime,
+        offTime: body.offTime,
       })
       .where(eq(schema.displayConfig.id, row.id))
       .returning();

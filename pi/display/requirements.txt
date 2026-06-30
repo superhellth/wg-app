@@ -3,3 +3,4 @@ gpiozero==2.0.1
 lgpio==0.2.2.0
 smbus2==0.4.3
 requests==2.32.3
+tzdata==2025.1

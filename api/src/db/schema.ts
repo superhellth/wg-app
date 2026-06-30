@@ -8,6 +8,7 @@ import {
   SPLIT_TYPES,
 } from "@wg/shared";
 import {
+  boolean,
   doublePrecision,
   integer,
   jsonb,
@@ -179,6 +180,10 @@ export const displayConfig = pgTable("display_config", {
   buttonYellow: displayFunctionEnum("button_yellow"),
   buttonRed: displayFunctionEnum("button_red"),
   buttonGreen: displayFunctionEnum("button_green"),
+  // Time control: blank the screen outside [onTime, offTime) Europe/Berlin.
+  scheduleEnabled: boolean("schedule_enabled").notNull().default(false),
+  onTime: text("on_time").notNull().default("07:00"),
+  offTime: text("off_time").notNull().default("23:00"),
 });
 
 // ── activity feed (append-only; also the audit trail) ───────────────

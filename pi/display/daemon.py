@@ -23,6 +23,8 @@ Env:
 """
 import os
 import time
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 # gpiozero's default RPi.GPIO backend fails edge detection on recent Pi OS
 # (Bookworm) and inside containers ("Failed to add edge detection"). The lgpio
@@ -31,6 +33,7 @@ import time
 os.environ.setdefault("GPIOZERO_PIN_FACTORY", "lgpio")
 
 import requests
+import smbus2
 from gpiozero import Button
 from RPLCD.i2c import CharLCD
 
@@ -57,6 +60,11 @@ FLASH_SECONDS = float(os.environ.get("FLASH_SECONDS", "1.5"))
 # Fixed wiring: color -> BCM pin. Mirrors BUTTON_GPIO in @wg/shared.
 BUTTON_PINS = {"blue": 12, "yellow": 16, "red": 20, "green": 21}
 
+# Single German WG — the on/off schedule is wall-clock Berlin, like the rest of
+# the app (web dayjs.tz, api dayjs.tz). Pin it so a UTC container host doesn't
+# shift the window by 2h. zoneinfo needs the tz database (tzdata in requirements).
+BERLIN = ZoneInfo("Europe/Berlin")
+
 # HD44780 has no umlauts — transliterate so names stay readable.
 TRANSLIT = str.maketrans(
     {"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae", "Ö": "Oe", "Ü": "Ue", "ß": "ss", "€": "EUR", "–": "-", "—": "-", "„": '"', "“": '"', "”": '"'}
@@ -81,10 +89,14 @@ class Daemon:
         # breadboard power rail doesn't take the daemon down.
         self.lcd = None
         self.last_lcd_attempt = 0.0
+        self._backlight_on = True  # physical backlight state (fresh LCD = on)
         self.config = {
             "defaultFunction": "saldo",
             "idleTimeoutSeconds": 30,
             "buttons": {"blue": None, "yellow": None, "red": None, "green": None},
+            "scheduleEnabled": False,
+            "onTime": "07:00",
+            "offTime": "23:00",
         }
         self.active_fn = None
         self.last_press = 0.0
@@ -141,6 +153,19 @@ class Daemon:
             print(f"[render] {e}", flush=True)
             self.render = {"title": "Verbindung...", "lines": [""]}
 
+    def _i2c_present(self):
+        """Cheap ACK probe with a context-closed bus handle. CharLCD opens the
+        i2c fd *then* writes init bytes; if the display is unpowered that write
+        raises mid-__init__ and leaks the fd (no reference to close it), so a
+        retry loop eventually hits EMFILE ([Errno 24]) and never recovers. Only
+        build CharLCD once the device actually ACKs."""
+        try:
+            with smbus2.SMBus(LCD_PORT) as bus:
+                bus.write_quick(LCD_ADDRESS)
+            return True
+        except OSError:
+            return False
+
     def ensure_lcd(self, now):
         """Return a live LCD, (re)initializing it if needed. None if the display
         is currently unreachable (e.g. powered off) — retried on a throttle."""
@@ -149,15 +174,19 @@ class Daemon:
         if now - self.last_lcd_attempt < LCD_RETRY_SECONDS:
             return None
         self.last_lcd_attempt = now
+        if not self._i2c_present():
+            print("[lcd] no device at i2c (powered off?)", flush=True)
+            return None
         try:
             self.lcd = CharLCD(
                 i2c_expander="PCF8574", address=LCD_ADDRESS, port=LCD_PORT,
                 cols=COLS, rows=ROWS, auto_linebreaks=False, charmap=LCD_CHARMAP,
             )
             self._last_rows = None  # force a full redraw on the fresh screen
+            self._backlight_on = True  # a fresh panel powers up with backlight on
             print("[lcd] connected", flush=True)
         except Exception as e:  # noqa: BLE001 — display absent/unpowered
-            self.lcd = None
+            self._drop_lcd()  # close any half-open fd from a partial init
             print(f"[lcd] init failed: {e}", flush=True)
         return self.lcd
 
@@ -169,6 +198,41 @@ class Daemon:
             pass
         self.lcd = None
         self._last_rows = None
+
+    def _scheduled_on(self, wall):
+        """Is the display meant to be on right now? `wall` is a Berlin-aware
+        datetime. Window is [onTime, offTime), wrapping midnight (off 23:00 / on
+        07:00 works). Equal times = always on."""
+        cfg = self.config
+        if not cfg.get("scheduleEnabled"):
+            return True
+        on = cfg.get("onTime", "07:00")
+        off = cfg.get("offTime", "23:00")
+        t = wall.strftime("%H:%M")
+        if on == off:
+            return True
+        if on < off:
+            return on <= t < off          # same-day window
+        return t >= on or t < off          # window wraps midnight
+
+    def _set_backlight(self, on, now):
+        """Drive the panel backlight, writing only on a state change. Off also
+        clears the screen; on forces a redraw so content reappears immediately."""
+        lcd = self.ensure_lcd(now)
+        if lcd is None or self._backlight_on == on:
+            return
+        try:
+            lcd.backlight_enabled = on
+            if on:
+                self._last_rows = None  # redraw whatever content we hold
+            else:
+                lcd.clear()
+                self._last_rows = None
+            self._backlight_on = on
+            print(f"[lcd] backlight {'on' if on else 'off'}", flush=True)
+        except OSError as e:
+            print(f"[lcd] backlight failed: {e}", flush=True)
+            self._drop_lcd()
 
     def write(self, now, row0, row1):
         lcd = self.ensure_lcd(now)
@@ -228,6 +292,15 @@ class Daemon:
 
             if now - self.config_fetched_at > CONFIG_SECONDS:
                 self.fetch_config()
+
+            # Time control: outside the on-window, blank the panel and skip
+            # render fetches. Config is still polled above, so re-enabling the
+            # schedule (or disabling it) is picked up within CONFIG_SECONDS.
+            if not self._scheduled_on(datetime.now(BERLIN)):
+                self._set_backlight(False, now)
+                time.sleep(0.2)
+                continue
+            self._set_backlight(True, now)
 
             # Revert to the default function after the idle timeout.
             idle = float(self.config.get("idleTimeoutSeconds", 30))

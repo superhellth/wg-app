@@ -116,6 +116,7 @@ services:
       API_URL: http://api:3000
       LCD_ADDRESS: "0x3f"
       LCD_PORT: "1" # /dev/i2c-1 (SDA1/SCL1)
+      TZ: Europe/Berlin # on/off schedule is Berlin wall-clock
     privileged: true
     devices:
       - /dev/gpiomem:/dev/gpiomem

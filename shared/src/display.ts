@@ -53,12 +53,24 @@ export const displayButtonsSchema = z.object({
 });
 export type DisplayButtons = z.infer<typeof displayButtonsSchema>;
 
+/** Wall-clock time of day, "HH:MM" (Europe/Berlin, like the rest of the app). */
+export const timeOfDay = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Zeit im Format HH:MM");
+export type TimeOfDay = z.infer<typeof timeOfDay>;
+
 export const displayConfigSchema = z.object({
   /** shown when no button was pressed within idleTimeoutSeconds */
   defaultFunction: displayFunction,
   /** seconds of inactivity before reverting to the default function */
   idleTimeoutSeconds: z.number().int().min(5).max(3600),
   buttons: displayButtonsSchema,
+  /** when true, the daemon blanks the screen outside the [onTime, offTime) window */
+  scheduleEnabled: z.boolean(),
+  /** turn the display on at this Berlin wall-clock time */
+  onTime: timeOfDay,
+  /** turn the display off at this Berlin wall-clock time (window wraps midnight) */
+  offTime: timeOfDay,
 });
 export type DisplayConfig = z.infer<typeof displayConfigSchema>;
 

@@ -5,10 +5,15 @@ import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
+import Switch from "@mui/material/Switch";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { TimePicker } from "@mui/x-date-pickers/TimePicker";
 import {
   BUTTON_COLORS,
   BUTTON_GPIO,
@@ -19,10 +24,27 @@ import {
   type DisplayButtons,
   type DisplayFunction,
 } from "@wg/shared";
+import dayjs, { type Dayjs } from "dayjs";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDisplayConfig, useUpdateDisplayConfig } from "../api/display.js";
 import { SectionLabel } from "../components/SectionLabel.js";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+/** The WG lives in one place — pickers operate in Berlin regardless of device tz. */
+const WG_TZ = "Europe/Berlin";
+
+/** "HH:MM" (Berlin wall-clock) → Dayjs on today's Berlin date. */
+const parseHHMM = (s: string): Dayjs => {
+  const [h = 0, m = 0] = s.split(":").map(Number);
+  return dayjs().tz(WG_TZ).hour(h).minute(m).second(0).millisecond(0);
+};
+/** Dayjs → "HH:MM" Berlin wall-clock for storage. */
+const fmtHHMM = (d: Dayjs): string => d.tz(WG_TZ).format("HH:mm");
 
 const NONE = "none";
 const DOT: Record<ButtonColor, string> = {
@@ -45,6 +67,9 @@ export function Anzeige() {
   });
   const [defaultFn, setDefaultFn] = useState<DisplayFunction>("saldo");
   const [idle, setIdle] = useState("30");
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [onTime, setOnTime] = useState<Dayjs | null>(parseHHMM("07:00"));
+  const [offTime, setOffTime] = useState<Dayjs | null>(parseHHMM("23:00"));
 
   const seeded = useRef(false);
   useEffect(() => {
@@ -52,6 +77,9 @@ export function Anzeige() {
     setButtons(config.data.buttons);
     setDefaultFn(config.data.defaultFunction);
     setIdle(String(config.data.idleTimeoutSeconds));
+    setScheduleEnabled(config.data.scheduleEnabled);
+    setOnTime(parseHHMM(config.data.onTime));
+    setOffTime(parseHHMM(config.data.offTime));
     seeded.current = true;
   }, [config.data]);
 
@@ -62,13 +90,19 @@ export function Anzeige() {
     }));
 
   const idleNum = Number(idle);
-  const valid = idleNum >= 5 && idleNum <= 3600;
+  const timesValid =
+    !scheduleEnabled ||
+    (onTime?.isValid() === true && offTime?.isValid() === true);
+  const valid = idleNum >= 5 && idleNum <= 3600 && timesValid;
 
   const save = () =>
     update.mutate({
       defaultFunction: defaultFn,
       idleTimeoutSeconds: idleNum,
       buttons,
+      scheduleEnabled,
+      onTime: onTime ? fmtHHMM(onTime) : "07:00",
+      offTime: offTime ? fmtHHMM(offTime) : "23:00",
     });
 
   return (
@@ -157,6 +191,51 @@ export function Anzeige() {
           helperText={idle !== "" && !valid ? "5–3600 Sekunden" : undefined}
           sx={{ maxWidth: 320 }}
         />
+
+        <Box>
+          <SectionLabel>Zeitsteuerung</SectionLabel>
+          <Card sx={{ p: 2 }}>
+            <Stack spacing={2}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={scheduleEnabled}
+                    onChange={(e) => setScheduleEnabled(e.target.checked)}
+                  />
+                }
+                label="Display zeitgesteuert ein-/ausschalten"
+              />
+              {scheduleEnabled && (
+                <>
+                  <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    <Stack direction="row" spacing={1.5}>
+                      <TimePicker
+                        label="Einschalten um"
+                        value={onTime}
+                        timezone={WG_TZ}
+                        ampm={false}
+                        onChange={setOnTime}
+                        sx={{ flex: 1 }}
+                      />
+                      <TimePicker
+                        label="Ausschalten um"
+                        value={offTime}
+                        timezone={WG_TZ}
+                        ampm={false}
+                        onChange={setOffTime}
+                        sx={{ flex: 1 }}
+                      />
+                    </Stack>
+                  </LocalizationProvider>
+                  <Typography variant="caption" color="text.secondary">
+                    Außerhalb dieser Zeit bleibt der Bildschirm dunkel (Zeitzone
+                    Berlin).
+                  </Typography>
+                </>
+              )}
+            </Stack>
+          </Card>
+        </Box>
 
         {update.isError && (
           <Alert severity="error">Konnte nicht gespeichert werden.</Alert>

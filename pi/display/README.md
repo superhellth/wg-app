@@ -13,14 +13,15 @@ Drives the 16x2 I2C LCD and reads the four buttons, showing WG data. Runs as the
 | 4      | green  | 21         |
 
 Buttons wire to their GPIO pin and ground (internal pull-ups, active-low).
-LCD: PCF8574 I2C backpack at `0x27` on bus 0 (`/dev/i2c-0`, SDA0/SCL0).
+LCD: PCF8574 I2C backpack at `0x3f` on bus 1 (`/dev/i2c-1`, SDA1/SCL1) — matches
+the daemon defaults `LCD_PORT=1` / `LCD_ADDRESS=0x3f`.
 
 ## Setup on the Pi
 
-1. Enable I2C: `sudo raspi-config` → Interface Options → I2C → enable. Bus 0
-   on the SDA0/SCL0 pins may also need `dtparam=i2c_vc=on` (or `dtoverlay=i2c0`)
-   in `/boot/firmware/config.txt`, then reboot.
-2. Confirm bus + address: `i2cdetect -y 0` should show `27`. If it differs, set
+1. Enable I2C: `sudo raspi-config` → Interface Options → I2C → enable. Bus 1
+   (SDA1/SCL1, GPIO2/GPIO3) is the default `dtparam=i2c_arm=on`; no extra
+   overlay needed. Reboot if newly enabled.
+2. Confirm bus + address: `i2cdetect -y 1` should show `3f`. If it differs, set
    `LCD_PORT` / `LCD_ADDRESS` on the `display` service in compose.
 
 ## Config
