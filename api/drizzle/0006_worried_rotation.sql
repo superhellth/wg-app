@@ -12,12 +12,11 @@ UPDATE "wg" SET "rotation" = COALESCE(
 -- Repair open turns: point rotation_index at the assignee's slot in the new
 -- shared rotation (the old per-chore rotation column is gone). Leaves turns
 -- whose assignee is no longer in the rotation untouched.
-UPDATE "chore_turns" ct SET "rotation_index" = pos.idx
-  FROM "wg" w
-  CROSS JOIN LATERAL (
-    SELECT (ord - 1)::int AS idx
-    FROM jsonb_array_elements_text(w."rotation") WITH ORDINALITY AS r(mid, ord)
-    WHERE r.mid = ct."assignee_id"::text
-    LIMIT 1
-  ) pos
-  WHERE ct."completed_at" IS NULL AND ct."skipped_at" IS NULL;
+UPDATE "chore_turns" ct SET "rotation_index" = r.idx
+  FROM (
+    SELECT e.mid, (e.ord - 1)::int AS idx
+    FROM "wg" w, jsonb_array_elements_text(w."rotation") WITH ORDINALITY AS e(mid, ord)
+  ) r
+  WHERE r.mid = ct."assignee_id"::text
+    AND ct."completed_at" IS NULL
+    AND ct."skipped_at" IS NULL;

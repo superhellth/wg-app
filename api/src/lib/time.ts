@@ -39,16 +39,22 @@ export function advanceSteps(prevDue: Date, graceDays: number, now: Date): numbe
   return 2 + Math.floor(past / WEEK_MS);
 }
 
-/** Next deadline: always a Sunday, marched off the previous one (not `now`). */
+/**
+ * Next deadline: always a Sunday 23:59:59.999 Berlin, marched off the previous
+ * one (not `now`). Calendar-aware week math (+ snap to the ISO week end) so it
+ * stays pinned to the Berlin Sunday across DST switches — a raw +7·24h in ms
+ * would drift ±1h and could slip past midnight into Monday.
+ */
 export function nextChoreDue(prevDue: Date, steps: number): Date {
-  return new Date(prevDue.getTime() + steps * WEEK_MS);
+  return dayjs(prevDue).tz(TZ).add(steps, "week").endOf("isoWeek").toDate();
 }
 
 /**
  * Earliest a turn may be marked done: `dueAt − interval` (one rotation week).
  * = the start of the turn's own week, so a future turn can't be burned early;
  * overdue turns (dueAt in the past) are always past this and stay checkable.
+ * Calendar-aware (Berlin) so the threshold doesn't wobble across DST.
  */
 export function choreDoneOpensAt(dueAt: Date): Date {
-  return new Date(dueAt.getTime() - WEEK_MS);
+  return dayjs(dueAt).tz(TZ).subtract(1, "week").toDate();
 }
