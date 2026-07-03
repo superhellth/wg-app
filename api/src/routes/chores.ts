@@ -11,7 +11,7 @@ import { logActivity, type Tx } from "../lib/activity.js";
 import { BadRequestError, NotFoundError } from "../lib/errors.js";
 import { parse } from "../lib/parse.js";
 import { sendPushToMember } from "../lib/push.js";
-import { advanceSteps, firstChoreDue, nextChoreDue } from "../lib/time.js";
+import { advanceSteps, choreDoneOpensAt, firstChoreDue, nextChoreDue } from "../lib/time.js";
 import { requireMember } from "../plugins/auth.js";
 
 type ChoreRow = typeof schema.chores.$inferSelect;
@@ -252,6 +252,11 @@ export async function choresRoutes(app: FastifyInstance) {
         .from(schema.choreTurns)
         .where(activeTurnWhere(id));
       if (!current) throw new NotFoundError("no active turn");
+
+      // Can't tick a turn done before its own week starts (dueAt − 1 week).
+      if (now.getTime() < choreDoneOpensAt(current.dueAt).getTime()) {
+        throw new BadRequestError("Aufgabe kann noch nicht erledigt werden");
+      }
 
       await tx
         .update(schema.choreTurns)

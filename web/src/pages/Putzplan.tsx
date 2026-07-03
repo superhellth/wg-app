@@ -59,6 +59,9 @@ export function Putzplan() {
             const overdue = turn && dayjs(turn.dueAt).isBefore(dayjs());
             const doerId = turn ? turn.executorId ?? turn.assigneeId : null;
             const covering = turn && turn.executorId && turn.executorId !== turn.assigneeId;
+            // Can't tick done before the turn's own week starts (dueAt − 1 week).
+            const opensAt = turn ? dayjs(turn.dueAt).subtract(1, "week") : null;
+            const notYet = opensAt ? dayjs().isBefore(opensAt) : false;
             return (
               <Card
                 key={c.id}
@@ -123,8 +126,24 @@ export function Putzplan() {
                         </Stack>
                       </Box>
                     </Stack>
-                    <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 1.5 }}>
-                      <Button variant="contained" size="small" onClick={() => handleDone(c)}>
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      alignItems="center"
+                      justifyContent="flex-end"
+                      sx={{ mt: 1.5 }}
+                    >
+                      {notYet && opensAt && (
+                        <Typography variant="caption" color="text.secondary">
+                          Erledigen ab {formatDate(opensAt.toISOString())}
+                        </Typography>
+                      )}
+                      <Button
+                        variant="contained"
+                        size="small"
+                        disabled={notYet}
+                        onClick={() => handleDone(c)}
+                      >
                         Erledigt
                       </Button>
                     </Stack>

@@ -43,6 +43,13 @@
       "when": 1783074121295,
       "tag": "0005_friendly_dust",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783074200000,
+      "tag": "0006_worried_rotation",
+      "breakpoints": true
     }
   ]
 }

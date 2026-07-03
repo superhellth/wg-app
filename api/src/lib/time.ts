@@ -43,3 +43,12 @@ export function advanceSteps(prevDue: Date, graceDays: number, now: Date): numbe
 export function nextChoreDue(prevDue: Date, steps: number): Date {
   return new Date(prevDue.getTime() + steps * WEEK_MS);
 }
+
+/**
+ * Earliest a turn may be marked done: `dueAt − interval` (one rotation week).
+ * = the start of the turn's own week, so a future turn can't be burned early;
+ * overdue turns (dueAt in the past) are always past this and stay checkable.
+ */
+export function choreDoneOpensAt(dueAt: Date): Date {
+  return new Date(dueAt.getTime() - WEEK_MS);
+}
