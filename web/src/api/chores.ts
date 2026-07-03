@@ -15,9 +15,7 @@ export const choresApi = {
   update: (id: string, body: UpdateChore) =>
     http<Chore>(`/api/chores/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   done: (id: string) =>
-    http<ChoreTurn>(`/api/chores/${id}/done`, { method: "POST" }),
-  skip: (id: string) =>
-    http<ChoreTurn>(`/api/chores/${id}/skip`, { method: "POST" }),
+    http<ChoreTurn | null>(`/api/chores/${id}/done`, { method: "POST" }),
   swap: (id: string, body: SwapTurn) =>
     http<ChoreTurn>(`/api/chores/${id}/turn/assignee`, {
       method: "PATCH",
@@ -49,7 +47,6 @@ export const useUpdateChore = () =>
     choresApi.update(id, body),
   );
 export const useChoreDone = () => useChoreMutation(choresApi.done);
-export const useChoreSkip = () => useChoreMutation(choresApi.skip);
 export const useChoreSwap = () =>
   useChoreMutation(({ id, body }: { id: string; body: SwapTurn }) =>
     choresApi.swap(id, body),

@@ -15,6 +15,32 @@ export const wgSchema = z.object({
 export type Wg = z.infer<typeof wgSchema>;
 
 /**
+ * WG-wide chore config (see docs/chore-rota-redesign.md). `rotation` is the one
+ * shared, ordered member list every task passes around; it's auto-maintained
+ * (append on add, remove on archive) and reorderable here. `graceDays` is the
+ * post-deadline grace window (default 2 = through Tuesday): completing within it
+ * passes normally, past it skips the next person.
+ */
+export const wgConfigSchema = z.object({
+  id: uuid,
+  name: z.string(),
+  rotation: z.array(uuid),
+  graceDays: z.number().int().min(0).max(6),
+});
+export type WgConfig = z.infer<typeof wgConfigSchema>;
+
+/** PATCH body for the WG chore config — reorder rotation and/or set graceDays. */
+export const updateWgConfigSchema = z
+  .object({
+    rotation: z.array(uuid).optional(),
+    graceDays: z.number().int().min(0).max(6).optional(),
+  })
+  .refine((v) => v.rotation !== undefined || v.graceDays !== undefined, {
+    message: "nothing to update",
+  });
+export type UpdateWgConfig = z.infer<typeof updateWgConfigSchema>;
+
+/**
  * Response of POST /api/wg. Hands the creator's device the shared WG token
  * (== WG_TOKEN_SECRET) so it can authenticate subsequent requests. The creator
  * then builds the member roster via POST /api/members.

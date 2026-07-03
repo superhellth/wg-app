@@ -1,4 +1,4 @@
-import { and, eq, isNull, lt } from "drizzle-orm";
+import { and, eq, gt, isNull, lt } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import { sendPushToMember } from "../lib/push.js";
 
@@ -74,11 +74,19 @@ export async function runMeetingReminders(now = new Date()): Promise<void> {
 }
 
 /**
- * Chore overdue — run hourly. Push the assignee once, 1 day after due
- * (now >= dueAt + 24h AND overdueNotifiedAt IS NULL).
+ * Chore grace warning — run hourly. Push whoever's up once, inside the grace
+ * window: after the missed Sunday deadline but before the grace cutoff
+ * (dueAt < now < dueAt + graceDays, AND graceNotifiedAt IS NULL). Lands Monday.
+ * Past the cutoff it's pointless (they're already skipped), so we don't fire.
  */
-export async function runChoreOverdue(now = new Date()): Promise<void> {
-  const cutoff = new Date(now.getTime() - DAY_MS); // dueAt < cutoff ⇔ now >= dueAt + 24h
+export async function runChoreGraceWarning(now = new Date()): Promise<void> {
+  const [wgRow] = await db
+    .select({ graceDays: schema.wg.graceDays })
+    .from(schema.wg)
+    .limit(1);
+  const graceDays = wgRow?.graceDays ?? 2;
+  const windowStart = new Date(now.getTime() - graceDays * DAY_MS); // dueAt > this
+
   const turns = await db
     .select()
     .from(schema.choreTurns)
@@ -86,8 +94,9 @@ export async function runChoreOverdue(now = new Date()): Promise<void> {
       and(
         isNull(schema.choreTurns.completedAt),
         isNull(schema.choreTurns.skippedAt),
-        isNull(schema.choreTurns.overdueNotifiedAt),
-        lt(schema.choreTurns.dueAt, cutoff),
+        isNull(schema.choreTurns.graceNotifiedAt),
+        lt(schema.choreTurns.dueAt, now), // overdue
+        gt(schema.choreTurns.dueAt, windowStart), // grace not yet expired
       ),
     );
   if (turns.length === 0) return;
@@ -98,11 +107,11 @@ export async function runChoreOverdue(now = new Date()): Promise<void> {
   for (const t of turns) {
     await db
       .update(schema.choreTurns)
-      .set({ overdueNotifiedAt: now })
+      .set({ graceNotifiedAt: now })
       .where(eq(schema.choreTurns.id, t.id));
-    await sendPushToMember(t.assigneeId, {
+    await sendPushToMember(t.executorId ?? t.assigneeId, {
       title: "Überfällig",
-      body: `${nameById.get(t.choreId) ?? "Aufgabe"} ist überfällig`,
+      body: `${nameById.get(t.choreId) ?? "Aufgabe"} bald erledigen, sonst wird übersprungen`,
       url: "/chores",
     });
   }

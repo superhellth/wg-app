@@ -23,6 +23,7 @@ import { MeetingForm } from "./pages/MeetingForm.js";
 import { Mitbewohner } from "./pages/Mitbewohner.js";
 import { Profil } from "./pages/Profil.js";
 import { Putzplan } from "./pages/Putzplan.js";
+import { RotationSettings } from "./pages/RotationSettings.js";
 import { Start } from "./pages/Start.js";
 import { Termine } from "./pages/Termine.js";
 import { theme } from "./theme.js";
@@ -58,6 +59,7 @@ const router = createBrowserRouter([
           { path: "/geld/neu", element: <ExpenseForm /> },
           { path: "/geld/:id/bearbeiten", element: <ExpenseForm /> },
           { path: "/putzplan", element: <Putzplan /> },
+          { path: "/putzplan/reihenfolge", element: <RotationSettings /> },
           { path: "/putzplan/neu", element: <ChoreForm /> },
           { path: "/putzplan/:id/bearbeiten", element: <ChoreForm /> },
           { path: "/einkaufen", element: <Einkaufen /> },

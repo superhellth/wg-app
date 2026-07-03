@@ -1,9 +1,12 @@
-import { createWgSchema, resetWgSchema } from "@wg/shared";
+import { createWgSchema, resetWgSchema, updateWgConfigSchema } from "@wg/shared";
+import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db/client.js";
 import { env } from "../env.js";
-import { ConflictError, ForbiddenError } from "../lib/errors.js";
+import { logActivity } from "../lib/activity.js";
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "../lib/errors.js";
 import { parse } from "../lib/parse.js";
+import { requireMember } from "../plugins/auth.js";
 
 /** Hardcoded reset password (intentionally not a per-WG secret). */
 const RESET_PASSWORD = "Utopie!";
@@ -20,6 +23,66 @@ export async function wgRoutes(app: FastifyInstance) {
       .values({ name: body.name })
       .returning();
     return reply.status(201).send({ wg, wgToken: env.WG_TOKEN_SECRET });
+  });
+}
+
+/**
+ * Protected WG chore config — the shared rotation + grace window. Rotation is
+ * auto-maintained by the member routes (append on add, remove on archive); the
+ * PATCH here only reorders it (a permutation of the current set) and/or sets the
+ * grace window. See docs/chore-rota-redesign.md.
+ */
+export async function wgConfigRoutes(app: FastifyInstance) {
+  app.get("/", async () => {
+    const [wg] = await db
+      .select({
+        id: schema.wg.id,
+        name: schema.wg.name,
+        rotation: schema.wg.rotation,
+        graceDays: schema.wg.graceDays,
+      })
+      .from(schema.wg)
+      .limit(1);
+    if (!wg) throw new NotFoundError("WG not found");
+    return wg;
+  });
+
+  app.patch("/", async (req) => {
+    const body = parse(updateWgConfigSchema, req.body);
+    const actor = requireMember(req);
+    return db.transaction(async (tx) => {
+      const [before] = await tx.select().from(schema.wg).limit(1);
+      if (!before) throw new NotFoundError("WG not found");
+
+      const patch: Partial<typeof schema.wg.$inferInsert> = {};
+      if (body.graceDays !== undefined) patch.graceDays = body.graceDays;
+      if (body.rotation !== undefined) {
+        // reorder only — must be a permutation of the current rotation
+        const cur = [...before.rotation].sort();
+        const next = [...body.rotation].sort();
+        if (cur.length !== next.length || cur.some((v, i) => v !== next[i])) {
+          throw new BadRequestError("Rotation darf nur umsortiert werden");
+        }
+        patch.rotation = body.rotation;
+      }
+
+      const [after] = await tx
+        .update(schema.wg)
+        .set(patch)
+        .where(eq(schema.wg.id, before.id))
+        .returning();
+      await logActivity(tx, {
+        memberId: actor.id,
+        kind: "chore.updated",
+        data: { before, after },
+      });
+      return {
+        id: after!.id,
+        name: after!.name,
+        rotation: after!.rotation,
+        graceDays: after!.graceDays,
+      };
+    });
   });
 }
 

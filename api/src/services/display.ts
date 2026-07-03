@@ -74,7 +74,7 @@ async function renderChores(): Promise<DisplayRender> {
   const byChore = new Map(turns.map((t) => [t.choreId, t]));
   const lines = chores.map((c) => {
     const t = byChore.get(c.id);
-    const who = t ? names.get(t.assigneeId) ?? "?" : "-";
+    const who = t ? names.get(t.executorId ?? t.assigneeId) ?? "?" : "-";
     return pad(c.name, who);
   });
   return {

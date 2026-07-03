@@ -1,6 +1,5 @@
 import {
   BILLING_CYCLES,
-  CHORE_FREQUENCIES,
   DISPLAY_FUNCTIONS,
   MEETING_MODES,
   type PushKeys,
@@ -21,7 +20,6 @@ import {
 
 // ── enums (values sourced from @wg/shared — single source of truth) ──
 export const splitTypeEnum = pgEnum("split_type", SPLIT_TYPES);
-export const choreFrequencyEnum = pgEnum("chore_frequency", CHORE_FREQUENCIES);
 export const meetingModeEnum = pgEnum("meeting_mode", MEETING_MODES);
 export const rsvpEnum = pgEnum("rsvp", RSVP_VALUES);
 export const billingCycleEnum = pgEnum("billing_cycle", BILLING_CYCLES);
@@ -32,6 +30,11 @@ export const displayFunctionEnum = pgEnum("display_function", DISPLAY_FUNCTIONS)
 export const wg = pgTable("wg", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
+  // shared chore rotation — ordered member ids every task passes around
+  // (auto-maintained: append on add, remove on archive). See chore-rota-redesign.
+  rotation: jsonb("rotation").$type<string[]>().notNull().default([]),
+  // post-deadline grace window in days (default 2 = through Tuesday)
+  graceDays: integer("grace_days").notNull().default(2),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -116,25 +119,26 @@ export const shoppingItems = pgTable("shopping_items", {
 });
 
 // ── chores ──────────────────────────────────────────────────────────
+// A task is just a name; all tasks share the one WG rotation (wg.rotation).
 export const chores = pgTable("chores", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
-  frequency: choreFrequencyEnum("frequency").notNull(),
-  intervalDays: integer("interval_days"),
-  rotation: jsonb("rotation").$type<string[]>().notNull(), // ordered member ids
 });
 
 export const choreTurns = pgTable("chore_turns", {
   id: uuid("id").primaryKey().defaultRandom(),
   choreId: uuid("chore_id").references(() => chores.id).notNull(),
+  // nominal member = rotation[rotationIndex]; NEVER changed by swap/away
   assigneeId: uuid("assignee_id").references(() => members.id).notNull(),
-  // authoritative rotation position (a swap changes assignee, not this)
+  // who actually does/did it (away-override or swap); null ⇒ assignee does it
+  executorId: uuid("executor_id").references(() => members.id),
+  // authoritative rotation position (a swap/away changes executor, not this)
   rotationIndex: integer("rotation_index").notNull(),
   dueAt: timestamp("due_at", { withTimezone: true }).notNull(),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   skippedAt: timestamp("skipped_at", { withTimezone: true }),
-  // set by cron when the overdue push is sent (dedup; fires once at due + 24h)
-  overdueNotifiedAt: timestamp("overdue_notified_at", { withTimezone: true }),
+  // set by cron when the grace warning is sent (dedup; fires once, Monday)
+  graceNotifiedAt: timestamp("grace_notified_at", { withTimezone: true }),
 });
 
 // ── meetings ────────────────────────────────────────────────────────

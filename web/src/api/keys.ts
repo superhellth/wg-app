@@ -9,6 +9,7 @@ export const qk = {
   shopping: (history = false) => ["shopping", { history }] as const,
   shoppingAll: ["shopping"] as const,
   chores: ["chores"] as const,
+  wgConfig: ["wgConfig"] as const,
   meetings: ["meetings"] as const,
   meeting: (id: string) => ["meetings", id] as const,
   fixedCosts: ["fixedCosts"] as const,

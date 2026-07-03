@@ -1,6 +1,6 @@
 import cron from "node-cron";
 import { runMeetingCleanup } from "./services/cleanup.js";
-import { runChoreOverdue, runMeetingReminders } from "./services/reminders.js";
+import { runChoreGraceWarning, runMeetingReminders } from "./services/reminders.js";
 
 /**
  * Cron worker — time-based push only (chore overdue, meeting reminders).
@@ -18,16 +18,16 @@ function runJob(name: string, fn: () => Promise<void>): void {
 // (dedup via meetings.last_reminder_at).
 cron.schedule("*/5 * * * *", () => runJob("meeting-reminders", runMeetingReminders));
 
-// Chore overdue: hourly, push once 1 day after due
-// (now >= dueAt + 24h AND overdue_notified_at IS NULL).
-cron.schedule("0 * * * *", () => runJob("chore-overdue", runChoreOverdue));
+// Chore grace warning: hourly, push once inside the grace window (Monday)
+// (dueAt < now < dueAt + graceDays AND grace_notified_at IS NULL).
+cron.schedule("0 * * * *", () => runJob("chore-grace", runChoreGraceWarning));
 
 // Stale meeting cleanup: hourly, hard-delete fixed meetings >12h past.
 cron.schedule("0 * * * *", () => runJob("meeting-cleanup", runMeetingCleanup));
 
 // Catch up immediately on startup (dedup markers prevent double-sends).
 runJob("meeting-reminders", runMeetingReminders);
-runJob("chore-overdue", runChoreOverdue);
+runJob("chore-grace", runChoreGraceWarning);
 runJob("meeting-cleanup", runMeetingCleanup);
 
 process.on("SIGTERM", () => process.exit(0));

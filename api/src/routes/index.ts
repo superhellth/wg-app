@@ -12,7 +12,7 @@ import { meetingsRoutes } from "./meetings.js";
 import { membersRoutes } from "./members.js";
 import { settlementsRoutes } from "./settlements.js";
 import { shoppingRoutes } from "./shopping.js";
-import { wgResetRoutes, wgRoutes } from "./wg.js";
+import { wgConfigRoutes, wgResetRoutes, wgRoutes } from "./wg.js";
 
 export async function registerRoutes(app: FastifyInstance) {
   // ── Public (no auth) ──
@@ -34,6 +34,7 @@ export async function registerRoutes(app: FastifyInstance) {
     await protectedApp.register(fixedCostsRoutes, { prefix: "/api/fixed-costs" });
     await protectedApp.register(activityRoutes, { prefix: "/api/activity" });
     await protectedApp.register(displayRoutes, { prefix: "/api/display" });
+    await protectedApp.register(wgConfigRoutes, { prefix: "/api/wg" });
     await protectedApp.register(wgResetRoutes, { prefix: "/api/wg" });
   });
 }

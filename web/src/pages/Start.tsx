@@ -37,7 +37,11 @@ export function Start() {
   const me = memberId ? members.get(memberId) : undefined;
   const myBalance = (memberId && balances.data?.balances[memberId]) || 0;
 
-  const myTurn = chores.data?.find((c) => c.currentTurn?.assigneeId === memberId);
+  const myTurn = chores.data?.find(
+    (c) =>
+      c.currentTurn &&
+      (c.currentTurn.executorId ?? c.currentTurn.assigneeId) === memberId,
+  );
   const nextMeeting = (meetings.data ?? [])
     .filter((m) => m.startsAt && dayjs(m.startsAt).isAfter(dayjs()))
     .sort((a, b) => dayjs(a.startsAt!).valueOf() - dayjs(b.startsAt!).valueOf())[0];

@@ -40,6 +40,14 @@ export async function membersRoutes(app: FastifyInstance) {
         .insert(schema.members)
         .values({ displayName: body.displayName })
         .returning();
+      // append to the shared chore rotation (enters when the cycle reaches them)
+      const [wgRow] = await tx.select().from(schema.wg).limit(1);
+      if (wgRow && !wgRow.rotation.includes(m!.id)) {
+        await tx
+          .update(schema.wg)
+          .set({ rotation: [...wgRow.rotation, m!.id] })
+          .where(eq(schema.wg.id, wgRow.id));
+      }
       await logActivity(tx, {
         memberId: actor?.id ?? m!.id,
         kind: "member.added",
@@ -99,49 +107,52 @@ export async function membersRoutes(app: FastifyInstance) {
         .where(eq(schema.members.id, id))
         .returning();
 
-      // Drop the archived member from every chore rotation and repair any open
-      // turn, so rotations don't stall on someone who's gone.
-      const allChores = await tx.select().from(schema.chores);
-      for (const chore of allChores) {
-        if (!chore.rotation.includes(id)) continue;
-        const rotation = chore.rotation.filter((mid) => mid !== id);
+      // Drop the archived member from the shared rotation and repair every open
+      // turn, so the coupled rota doesn't stall on someone who's gone.
+      const [wgRow] = await tx.select().from(schema.wg).limit(1);
+      if (wgRow && wgRow.rotation.includes(id)) {
+        const rotation = wgRow.rotation.filter((mid) => mid !== id);
         await tx
-          .update(schema.chores)
+          .update(schema.wg)
           .set({ rotation })
-          .where(eq(schema.chores.id, chore.id));
+          .where(eq(schema.wg.id, wgRow.id));
 
-        const [turn] = await tx
+        const openTurns = await tx
           .select()
           .from(schema.choreTurns)
           .where(
             and(
-              eq(schema.choreTurns.choreId, chore.id),
               isNull(schema.choreTurns.completedAt),
               isNull(schema.choreTurns.skippedAt),
             ),
           );
-        if (!turn) continue;
-        if (rotation.length === 0) {
-          // no one left to do this chore — close the open turn
-          await tx
-            .update(schema.choreTurns)
-            .set({ skippedAt: new Date() })
-            .where(eq(schema.choreTurns.id, turn.id));
-          continue;
-        }
-        const idx = rotation.indexOf(turn.assigneeId);
-        const repaired =
-          idx === -1
-            ? { assigneeId: rotation[0]!, rotationIndex: 0 }
-            : { assigneeId: turn.assigneeId, rotationIndex: idx };
-        if (
-          repaired.assigneeId !== turn.assigneeId ||
-          repaired.rotationIndex !== turn.rotationIndex
-        ) {
-          await tx
-            .update(schema.choreTurns)
-            .set(repaired)
-            .where(eq(schema.choreTurns.id, turn.id));
+        for (const turn of openTurns) {
+          if (rotation.length === 0) {
+            // no one left — close the open turn
+            await tx
+              .update(schema.choreTurns)
+              .set({ skippedAt: new Date() })
+              .where(eq(schema.choreTurns.id, turn.id));
+            continue;
+          }
+          const idx = rotation.indexOf(turn.assigneeId);
+          const assigneeId = idx === -1 ? rotation[0]! : turn.assigneeId;
+          const rotationIndex = idx === -1 ? 0 : idx;
+          // drop an executor override that pointed at the archived member
+          const executorId =
+            turn.executorId && !rotation.includes(turn.executorId)
+              ? null
+              : turn.executorId;
+          if (
+            assigneeId !== turn.assigneeId ||
+            rotationIndex !== turn.rotationIndex ||
+            executorId !== turn.executorId
+          ) {
+            await tx
+              .update(schema.choreTurns)
+              .set({ assigneeId, rotationIndex, executorId })
+              .where(eq(schema.choreTurns.id, turn.id));
+          }
         }
       }
 
@@ -170,6 +181,14 @@ export async function membersRoutes(app: FastifyInstance) {
         .set({ archivedAt: null })
         .where(eq(schema.members.id, id))
         .returning();
+      // re-enter the shared rotation (appended to the end)
+      const [wgRow] = await tx.select().from(schema.wg).limit(1);
+      if (wgRow && !wgRow.rotation.includes(id)) {
+        await tx
+          .update(schema.wg)
+          .set({ rotation: [...wgRow.rotation, id] })
+          .where(eq(schema.wg.id, wgRow.id));
+      }
       await logActivity(tx, {
         memberId: actor.id,
         kind: "member.restored",

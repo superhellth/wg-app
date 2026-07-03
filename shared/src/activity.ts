@@ -27,6 +27,7 @@ export const ACTIVITY_KINDS = [
   "chore.done",
   "chore.swapped",
   "chore.skipped",
+  "chore.covered",
   "chore.reminded",
   "meeting.created",
   "meeting.updated",

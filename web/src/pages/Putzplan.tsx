@@ -1,6 +1,7 @@
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import NotificationsActiveRoundedIcon from "@mui/icons-material/NotificationsActiveRounded";
 import ScheduleRoundedIcon from "@mui/icons-material/ScheduleRounded";
+import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
@@ -14,7 +15,6 @@ import {
   useChores,
   useChoreDone,
   useChoreRemind,
-  useChoreSkip,
   type ChoreWithTurn,
 } from "../api/chores.js";
 import { useMembersMap } from "../api/members.js";
@@ -28,7 +28,6 @@ export function Putzplan() {
   const chores = useChores();
   const members = useMembersMap();
   const done = useChoreDone();
-  const skip = useChoreSkip();
   const remind = useChoreRemind();
   const confirm = useConfirm();
 
@@ -41,22 +40,25 @@ export function Putzplan() {
     if (ok) done.mutate(c.id);
   };
 
-  const handleSkip = async (c: ChoreWithTurn) => {
-    const ok = await confirm({
-      title: "Runde überspringen?",
-      body: `Diese Runde von „${c.name}“ überspringen? Die Rotation rückt zur nächsten Person weiter, ohne dass die Aufgabe erledigt wird.`,
-      confirmLabel: "Überspringen",
-    });
-    if (ok) skip.mutate(c.id);
-  };
-
   return (
     <Box sx={{ p: 2 }}>
+      <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1 }}>
+        <Button
+          size="small"
+          startIcon={<TuneRoundedIcon fontSize="small" />}
+          onClick={() => navigate("/putzplan/reihenfolge")}
+          sx={{ color: "text.secondary" }}
+        >
+          Reihenfolge
+        </Button>
+      </Stack>
       {chores.data && chores.data.length > 0 ? (
         <Stack spacing={1.5}>
           {chores.data.map((c) => {
             const turn = c.currentTurn;
             const overdue = turn && dayjs(turn.dueAt).isBefore(dayjs());
+            const doerId = turn ? turn.executorId ?? turn.assigneeId : null;
+            const covering = turn && turn.executorId && turn.executorId !== turn.assigneeId;
             return (
               <Card
                 key={c.id}
@@ -91,14 +93,19 @@ export function Putzplan() {
                   </Stack>
                 </Stack>
 
-                {turn ? (
+                {turn && doerId ? (
                   <>
                     <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mt: 0.5 }}>
-                      <MemberAvatar memberId={turn.assigneeId} size={44} />
+                      <MemberAvatar memberId={doerId} size={44} />
                       <Box sx={{ flex: 1, minWidth: 0 }}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
-                          {members.get(turn.assigneeId)?.displayName ?? "—"}
+                          {members.get(doerId)?.displayName ?? "—"}
                         </Typography>
+                        {covering && (
+                          <Typography variant="caption" color="text.secondary">
+                            vertritt {members.get(turn.assigneeId)?.displayName ?? "—"}
+                          </Typography>
+                        )}
                         <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mt: 0.25 }}>
                           <ScheduleRoundedIcon
                             sx={{ fontSize: 15, color: overdue ? "error.main" : "text.secondary" }}
@@ -117,9 +124,6 @@ export function Putzplan() {
                       </Box>
                     </Stack>
                     <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 1.5 }}>
-                      <Button size="small" onClick={() => handleSkip(c)}>
-                        Überspringen
-                      </Button>
                       <Button variant="contained" size="small" onClick={() => handleDone(c)}>
                         Erledigt
                       </Button>
@@ -137,7 +141,7 @@ export function Putzplan() {
       ) : (
         <EmptyState
           title="Noch kein Putzplan"
-          hint="Erstelle eine wiederkehrende Aufgabe mit Rotation."
+          hint="Erstelle eine wiederkehrende Aufgabe."
         />
       )}
 
