@@ -100,6 +100,9 @@ services:
       RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
       RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
       RCLONE_CONFIG_R2_ENDPOINT: ${R2_ENDPOINT}
+      # R2 token is bucket-scoped (no CreateBucket rights); skip rclone's implicit
+      # bucket check/create so rcat doesn't 403 on an already-existing bucket.
+      RCLONE_CONFIG_R2_NO_CHECK_BUCKET: "true"
     depends_on:
       db:
         condition: service_healthy
