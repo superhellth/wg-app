@@ -235,7 +235,10 @@ export function ExpenseForm() {
                 variant={selected.has(m.id) ? "filled" : "outlined"}
                 color={selected.has(m.id) ? "primary" : "default"}
                 onClick={() => toggle(m.id)}
-                sx={{ "& .MuiChip-avatar": { ml: 0.75 } }}
+                sx={{
+                  "& .MuiChip-avatar": { ml: 1 },
+                  "& .MuiChip-label": { pl: 0.5 },
+                }}
               />
             ))}
           </Stack>

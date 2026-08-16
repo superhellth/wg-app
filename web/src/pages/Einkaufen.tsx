@@ -121,7 +121,7 @@ export function Einkaufen() {
 
   return (
     <Box sx={{ p: 2, pb: selected.size ? 12 : 2 }}>
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
+      <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="fullWidth" sx={{ mb: 2 }}>
         <Tab value="active" label="Liste" />
         <Tab value="history" label="Verlauf" />
       </Tabs>
@@ -129,6 +129,7 @@ export function Einkaufen() {
       {tab === "active" && (
         <Autocomplete
           freeSolo
+          disableClearable
           options={suggestions}
           inputValue={name}
           onInputChange={(_, v) => setName(v)}

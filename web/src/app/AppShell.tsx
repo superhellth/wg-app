@@ -112,7 +112,16 @@ export function AppShell() {
         value={activeTab(location.pathname)}
         onChange={(_, v) => navigate(v)}
         showLabels
-        sx={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 1100 }}
+        sx={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1100,
+          px: 2,
+          maxWidth: 640,
+          mx: "auto",
+        }}
       >
         {TABS.map((t) => (
           <BottomNavigationAction
