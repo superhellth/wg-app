@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { authHook } from "../plugins/auth.js";
+import { absencesRoutes } from "./absences.js";
 import { activityRoutes } from "./activity.js";
 import { balancesRoutes } from "./balances.js";
 import { choresRoutes } from "./chores.js";
@@ -23,6 +24,7 @@ export async function registerRoutes(app: FastifyInstance) {
   await app.register(async (protectedApp) => {
     protectedApp.addHook("onRequest", authHook);
     await protectedApp.register(membersRoutes, { prefix: "/api/members" });
+    await protectedApp.register(absencesRoutes, { prefix: "/api/absences" });
     await protectedApp.register(invitesRoutes, { prefix: "/api/invites" });
     await protectedApp.register(devicesRoutes, { prefix: "/api/devices" });
     await protectedApp.register(expensesRoutes, { prefix: "/api/expenses" });
