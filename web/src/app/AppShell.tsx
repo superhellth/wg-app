@@ -126,7 +126,7 @@ export function AppShell() {
             value={t.path}
             label={t.label}
             icon={t.icon}
-            sx={{ flex: "0 0 auto", minWidth: 64, maxWidth: 88 }}
+            sx={{ flex: "1 1 0", minWidth: 0, maxWidth: 88, px: 0 }}
           />
         ))}
       </BottomNavigation>

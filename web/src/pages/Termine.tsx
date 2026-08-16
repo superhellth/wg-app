@@ -194,11 +194,11 @@ function CalendarView() {
         </>
       )}
 
-      <Accordion defaultExpanded disableGutters sx={{ mt: 3 }}>
+      <Accordion disableGutters sx={{ mt: 3 }}>
         <AccordionSummary expandIcon={<ExpandMoreRoundedIcon />}>
           <Typography sx={{ fontWeight: 600 }}>Termine</Typography>
         </AccordionSummary>
-        <AccordionDetails sx={{ px: 0 }}>
+        <AccordionDetails sx={{ px: 2, pb: 2 }}>
           {sortedMeetings.length > 0 ? (
             <Stack spacing={1.5}>
               {sortedMeetings.map((m) => {
@@ -230,11 +230,11 @@ function CalendarView() {
         </AccordionDetails>
       </Accordion>
 
-      <Accordion defaultExpanded disableGutters>
+      <Accordion disableGutters>
         <AccordionSummary expandIcon={<ExpandMoreRoundedIcon />}>
           <Typography sx={{ fontWeight: 600 }}>Abwesenheiten</Typography>
         </AccordionSummary>
-        <AccordionDetails sx={{ px: 0 }}>
+        <AccordionDetails sx={{ px: 2, pb: 2 }}>
           {mine.length > 0 ? (
             <Card sx={{ px: 1 }}>
               {mine.map((a, i) => (
