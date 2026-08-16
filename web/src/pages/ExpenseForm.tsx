@@ -236,8 +236,9 @@ export function ExpenseForm() {
                 color={selected.has(m.id) ? "primary" : "default"}
                 onClick={() => toggle(m.id)}
                 sx={{
-                  "& .MuiChip-avatar": { ml: 1 },
-                  "& .MuiChip-label": { pl: 0.5 },
+                  // double class beats MUI's internal .MuiChip-avatar rule on specificity
+                  // (not just injection order), so this stays robust across renders
+                  "& .MuiChip-avatar.MuiChip-avatar": { marginLeft: "10px" },
                 }}
               />
             ))}
