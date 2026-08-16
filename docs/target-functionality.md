@@ -61,16 +61,30 @@ The core shared ledger. One-off and recurring expenses feed the same balances.
 
 ## 3. Financial Overview (fixed-cost board)
 
-A **standalone, informational** module. **Not connected** to the money/ledger system (§2) — the two views are independent.
+A cost board that **feeds the ledger automatically**. Each entry both
+displays the recurring cost AND generates a matching expense in the
+money/ledger system (§2) on its billing cycle.
 
-- Purpose: transparency — "who pays for electricity/gas/internet/rent…, how much?"
-- A **static cost board**: a list of fixed/recurring costs. Per cost entry:
+- Purpose: transparency ("who pays for electricity/gas/internet/rent…,
+  how much?") *and* keeping the ledger's fixed costs current without
+  manual re-entry.
+- A cost board entry has:
   - Name (e.g. Strom, Gas, Internet, Miete)
   - Total amount
-  - Billing cycle
-  - Contract holder (who holds/pays the contract)
-  - Split rule → **per-person share displayed**
-- Manually maintained. Pure reference — **no settlement math, no balances, no debt tracking** here.
+  - Billing cycle (monthly / quarterly / yearly)
+  - Contract holder (who holds/pays the contract — becomes the payer
+    on the generated expense)
+  - Next due date (when the next expense is generated)
+  - Active/paused toggle (paused costs don't generate)
+  - Split rule → **per-person share displayed** (always equal among
+    active members)
+- On the due date, an expense is auto-created: payer = contract
+  holder, split equally among all currently-active members,
+  description = the cost's name, category `"Fixkosten"`. It then
+  behaves like any other expense — editable, deletable, feeds
+  balances.
+- Manually maintained otherwise (create/edit/delete the board entry;
+  pause instead of deleting to stop generation temporarily).
 
 ---
 
@@ -132,7 +146,6 @@ A **standalone, informational** module. **Not connected** to the money/ledger sy
 ---
 
 ## 8. Out of scope for v1
-- Recurring / auto-repeating expenses (the `recurring` flag was dropped; fixed recurring costs live in the standalone Financial Overview, §3)
 - Single-use invite links (links are reusable for 24h instead)
 - Multi-WG / group switching
 - Admin roles & permissions
@@ -145,4 +158,3 @@ A **standalone, informational** module. **Not connected** to the money/ledger sy
 - Shopping categories, multiple lists, favorites
 - Meeting location / notes / bring-list
 - Push for money & shopping events
-- Linking Financial Overview to the ledger

@@ -99,7 +99,10 @@ Three-state gate, identity in `localStorage` (`src/api/identity.ts`, reactive vi
 `ChoreForm` (reorderable rotation) · `Einkaufen` (multi-select → bridge, Verlauf) ·
 `Termine` + `MeetingDetail` (date + name only, no RSVP/polling) + `MeetingForm`
 (title + MUI date picker), list/Kalender toggle with `AbsenceCalendar` +
-absence planning dialog · `Fixkosten` (computed per-person share) ·
+absence planning dialog · `Fixkosten` (computed per-person share; dialog adds a
+Berlin-timezoned `DatePicker` for the next due date and an Aktiv/Pausiert
+`Switch` — auto-generates a matching `Geld` expense each billing cycle, no
+longer flagged as disconnected from the ledger) ·
 `Mitbewohner` (roster, away, archive/restore, invite link copy/share) · `Profil`
 (identity switch, push) · `Aktivität` (cursor-paginated infinite feed,
 client-side name join, per-`kind` German strings in `lib/activityText.ts`).

@@ -189,6 +189,16 @@ No `fastify-type-provider-zod` — explicit and dependency-light.
   reminded (`meetings.lastReminderAt IS NULL`), push all active members + record.
 - **Chore overdue** (hourly): rows with `completedAt IS NULL AND skippedAt IS NULL
   AND now ≥ dueAt + 24h AND overdueNotifiedAt IS NULL` → push assignee, set marker.
+- **Fixed-cost generation** (daily, 03:00 Europe/Berlin) —
+  `services/fixedCostGeneration.ts`, `runFixedCostGeneration`. For every
+  active fixed cost whose `nextDueAt` has passed: insert a matching expense
+  (payer = contract holder, equal split among active members, category
+  `"Fixkosten"`), log it to the activity feed as a system action
+  (`memberId: null`, kind `expense.created`), then advance `nextDueAt` by one
+  billing cycle (`lib/time.ts`'s `nextCycleDate`). If the worker missed
+  multiple cycles while down, `nextDueAt` is advanced in-memory until it's
+  back in the future but only one expense is generated for the whole gap (no
+  backdated burst). Runs once immediately on worker startup too, for catch-up.
 - Event-driven pushes stay **inline in the API**, not here.
 
 ## Routing layout
