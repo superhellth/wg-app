@@ -58,7 +58,7 @@ export async function membersRoutes(app: FastifyInstance) {
     return reply.status(201).send(member);
   });
 
-  // Edit a member (displayName and/or awayUntil).
+  // Edit a member (displayName only).
   app.patch("/:id", async (req) => {
     const actor = requireMember(req);
     const { id } = parse(idParamSchema, req.params);
@@ -72,9 +72,6 @@ export async function membersRoutes(app: FastifyInstance) {
 
       const patch: Partial<typeof schema.members.$inferInsert> = {};
       if (body.displayName !== undefined) patch.displayName = body.displayName;
-      if (body.awayUntil !== undefined) {
-        patch.awayUntil = body.awayUntil ? new Date(body.awayUntil) : null;
-      }
 
       const [after] = await tx
         .update(schema.members)

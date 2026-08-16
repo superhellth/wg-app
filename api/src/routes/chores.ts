@@ -4,7 +4,7 @@ import {
   swapTurnSchema,
   updateChoreSchema,
 } from "@wg/shared";
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gte, isNull, lte } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db/client.js";
 import { logActivity, type Tx } from "../lib/activity.js";
@@ -40,13 +40,13 @@ async function loadWgConfig(tx: Tx): Promise<WgConfig> {
   return { rotation: row?.rotation ?? [], graceDays: row?.graceDays ?? 2 };
 }
 
-/** Member ids currently away (awayUntil in the future). */
+/** Member ids currently away (an absence row spans `now`). */
 async function awaySet(tx: Tx, now: Date): Promise<Set<string>> {
   const rows = await tx
-    .select({ id: schema.members.id })
-    .from(schema.members)
-    .where(gt(schema.members.awayUntil, now));
-  return new Set(rows.map((r) => r.id));
+    .select({ memberId: schema.absences.memberId })
+    .from(schema.absences)
+    .where(and(lte(schema.absences.from, now), gte(schema.absences.until, now)));
+  return new Set(rows.map((r) => r.memberId));
 }
 
 /**
