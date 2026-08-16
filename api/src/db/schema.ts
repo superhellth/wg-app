@@ -102,14 +102,18 @@ export const settlements = pgTable("settlements", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
-// ── financial overview (standalone, NOT linked to ledger) ────────────
-// Always split equally among active members; per-person share computed on read.
+// ── financial overview ────────────────────────────────────────────
+// Auto-generates a matching expense on the ledger each billing cycle
+// (see api/src/services/fixedCostGeneration.ts). Always split equally
+// among active members; per-person share computed on read.
 export const fixedCosts = pgTable("fixed_costs", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   amount: integer("amount").notNull(), // cents
   cycle: billingCycleEnum("cycle").notNull(),
   contractHolderId: uuid("contract_holder_id").references(() => members.id).notNull(),
+  nextDueAt: timestamp("next_due_at", { withTimezone: true }).notNull(),
+  active: boolean("active").notNull().default(true),
 });
 
 // ── shopping ────────────────────────────────────────────────────────
