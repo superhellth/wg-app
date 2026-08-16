@@ -118,7 +118,8 @@ export function AppShell() {
           left: 0,
           right: 0,
           zIndex: 1100,
-          px: 4,
+          justifyContent: "space-evenly",
+          px: 2,
           maxWidth: 640,
           mx: "auto",
         }}
@@ -129,6 +130,7 @@ export function AppShell() {
             value={t.path}
             label={t.label}
             icon={t.icon}
+            sx={{ flex: "0 0 auto", minWidth: 64, maxWidth: 88 }}
           />
         ))}
       </BottomNavigation>

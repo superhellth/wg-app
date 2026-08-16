@@ -125,7 +125,7 @@ export function Termine() {
         >
           <SpeedDialAction
             icon={<EventRoundedIcon />}
-            tooltipTitle="Neuer Termin"
+            tooltipTitle="Termin"
             tooltipOpen
             onClick={() => {
               setDialOpen(false);
@@ -134,7 +134,7 @@ export function Termine() {
           />
           <SpeedDialAction
             icon={<FlightTakeoffRoundedIcon />}
-            tooltipTitle="Abwesenheit planen"
+            tooltipTitle="Abwesenheit"
             tooltipOpen
             onClick={() => {
               setDialOpen(false);
