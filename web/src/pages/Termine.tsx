@@ -166,27 +166,37 @@ function CalendarView() {
         </AccordionSummary>
         <AccordionDetails sx={{ px: 2, pb: 2 }}>
           {sortedMeetings.length > 0 ? (
-            <Stack spacing={1.5}>
+            <Stack spacing={1}>
               {sortedMeetings.map((m) => (
                 <Card
                   key={m.id}
-                  sx={{
-                    bgcolor: "rgba(91,79,233,0.07)",
-                    border: "1px solid rgba(91,79,233,0.16)",
-                  }}
+                  sx={{ p: 1.75, cursor: "pointer" }}
+                  onClick={() => navigate(`/termine/${m.id}/bearbeiten`)}
                 >
-                  <CardActionArea
-                    sx={{ p: 2, display: "flex", alignItems: "center", gap: 2 }}
-                    onClick={() => navigate(`/termine/${m.id}/bearbeiten`)}
-                  >
-                    <EventRoundedIcon sx={{ color: "primary.main", fontSize: 34 }} />
+                  <Stack direction="row" alignItems="center" spacing={1.5}>
+                    <Box
+                      sx={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: "50%",
+                        bgcolor: "rgba(91,79,233,0.1)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <EventRoundedIcon sx={{ color: "primary.main", fontSize: 20 }} />
+                    </Box>
                     <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography sx={{ fontWeight: 700, lineHeight: 1.2 }}>{m.title}</Typography>
-                      <Typography color="text.secondary">
+                      <Typography noWrap sx={{ fontWeight: 600 }}>
+                        {m.title}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
                         {formatDateTime(m.startsAt)}
                       </Typography>
                     </Box>
-                  </CardActionArea>
+                  </Stack>
                 </Card>
               ))}
             </Stack>
@@ -202,30 +212,38 @@ function CalendarView() {
         </AccordionSummary>
         <AccordionDetails sx={{ px: 2, pb: 2 }}>
           {upcomingAbsences.length > 0 ? (
-            <Stack spacing={1.5}>
+            <Stack spacing={1}>
               {upcomingAbsences.map((a) => (
                 <Card
                   key={a.id}
-                  sx={{
-                    bgcolor: "rgba(91,79,233,0.07)",
-                    border: "1px solid rgba(91,79,233,0.16)",
-                  }}
+                  sx={{ p: 1.75, cursor: "pointer" }}
+                  onClick={() => navigate(`/termine/abwesenheit/${a.id}/bearbeiten`)}
                 >
-                  <CardActionArea
-                    sx={{ p: 2, display: "flex", alignItems: "center", gap: 2 }}
-                    onClick={() => navigate(`/termine/abwesenheit/${a.id}/bearbeiten`)}
-                  >
-                    <FlightTakeoffRoundedIcon sx={{ color: "primary.main", fontSize: 34 }} />
+                  <Stack direction="row" alignItems="center" spacing={1.5}>
+                    <Box
+                      sx={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: "50%",
+                        bgcolor: "rgba(91,79,233,0.1)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <FlightTakeoffRoundedIcon sx={{ color: "primary.main", fontSize: 20 }} />
+                    </Box>
                     <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+                      <Typography noWrap sx={{ fontWeight: 600 }}>
                         {members.data?.find((m) => m.id === a.memberId)?.displayName ??
                           "Unbekannt"}
                       </Typography>
-                      <Typography color="text.secondary">
+                      <Typography variant="caption" color="text.secondary">
                         {formatDate(a.from)} – {formatDate(a.until)}
                       </Typography>
                     </Box>
-                  </CardActionArea>
+                  </Stack>
                 </Card>
               ))}
             </Stack>
