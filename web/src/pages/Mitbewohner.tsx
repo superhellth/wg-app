@@ -53,10 +53,10 @@ export function Mitbewohner() {
     });
 
   const absences = useAbsences();
-  const now = dayjs();
+  const nowMs = dayjs().valueOf();
   const awayMemberIds = new Set(
     (absences.data ?? [])
-      .filter((a) => dayjs(a.from).isBefore(now) && dayjs(a.until).isAfter(now))
+      .filter((a) => dayjs(a.from).valueOf() <= nowMs && nowMs <= dayjs(a.until).valueOf())
       .map((a) => a.memberId),
   );
   const isAway = (m: Member) => awayMemberIds.has(m.id);
