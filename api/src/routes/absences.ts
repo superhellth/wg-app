@@ -1,4 +1,4 @@
-import { createAbsenceSchema, idParamSchema, uuid } from "@wg/shared";
+import { createAbsenceSchema, idParamSchema, updateAbsenceSchema, uuid } from "@wg/shared";
 import { asc, eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
@@ -44,7 +44,36 @@ export async function absencesRoutes(app: FastifyInstance) {
     return reply.status(201).send(absence);
   });
 
-  // Cancel a planned/past absence (delete + recreate is the only "edit" path).
+  app.get("/:id", async (req) => {
+    const { id } = parse(idParamSchema, req.params);
+    const [absence] = await db.select().from(schema.absences).where(eq(schema.absences.id, id));
+    if (!absence) throw new NotFoundError("absence not found");
+    return absence;
+  });
+
+  app.put("/:id", async (req) => {
+    const actor = requireMember(req);
+    const { id } = parse(idParamSchema, req.params);
+    const body = parse(updateAbsenceSchema, req.body);
+    return db.transaction(async (tx) => {
+      const [before] = await tx.select().from(schema.absences).where(eq(schema.absences.id, id));
+      if (!before) throw new NotFoundError("absence not found");
+
+      const [after] = await tx
+        .update(schema.absences)
+        .set({ memberId: body.memberId, from: new Date(body.from), until: new Date(body.until) })
+        .where(eq(schema.absences.id, id))
+        .returning();
+      await logActivity(tx, {
+        memberId: actor.id,
+        kind: "absence.updated",
+        data: { before, after },
+      });
+      return after!;
+    });
+  });
+
+  // Cancel a planned/past absence.
   app.delete("/:id", async (req, reply) => {
     const actor = requireMember(req);
     const { id } = parse(idParamSchema, req.params);

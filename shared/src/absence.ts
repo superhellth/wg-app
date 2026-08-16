@@ -20,3 +20,6 @@ export const createAbsenceSchema = z
     message: "from must be before until",
   });
 export type CreateAbsence = z.infer<typeof createAbsenceSchema>;
+
+export const updateAbsenceSchema = createAbsenceSchema;
+export type UpdateAbsence = z.infer<typeof updateAbsenceSchema>;

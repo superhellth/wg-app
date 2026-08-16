@@ -12,6 +12,7 @@ import { IdentityPicker } from "./pages/onboarding/IdentityPicker.js";
 import { Join } from "./pages/onboarding/Join.js";
 import { Landing } from "./pages/onboarding/Landing.js";
 import { Aktivitaet } from "./pages/Aktivitaet.js";
+import { AbsenceForm } from "./pages/AbsenceForm.js";
 import { ChoreForm } from "./pages/ChoreForm.js";
 import { Einkaufen } from "./pages/Einkaufen.js";
 import { ExpenseForm } from "./pages/ExpenseForm.js";
@@ -63,6 +64,8 @@ const router = createBrowserRouter([
           { path: "/termine", element: <Termine /> },
           { path: "/termine/neu", element: <MeetingForm /> },
           { path: "/termine/:id/bearbeiten", element: <MeetingForm /> },
+          { path: "/termine/abwesenheit/neu", element: <AbsenceForm /> },
+          { path: "/termine/abwesenheit/:id/bearbeiten", element: <AbsenceForm /> },
           { path: "/fixkosten", element: <Fixkosten /> },
           { path: "/mitbewohner", element: <Mitbewohner /> },
           { path: "/aktivitaet", element: <Aktivitaet /> },

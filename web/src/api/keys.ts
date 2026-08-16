@@ -14,6 +14,7 @@ export const qk = {
   meeting: (id: string) => ["meetings", id] as const,
   absences: (memberId?: string) => ["absences", { memberId: memberId ?? null }] as const,
   absencesAll: ["absences"] as const,
+  absence: (id: string) => ["absences", "detail", id] as const,
   fixedCosts: ["fixedCosts"] as const,
   activity: ["activity"] as const,
 };
