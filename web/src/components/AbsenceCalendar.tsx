@@ -67,7 +67,13 @@ function DayCell(
 }
 
 /** Calendar overview of meetings (dots) + member absences (colored bars). */
-export function AbsenceCalendar() {
+export function AbsenceCalendar({
+  value,
+  onChange,
+}: {
+  value?: Dayjs | null;
+  onChange?: (day: Dayjs) => void;
+}) {
   const absences = useAbsences();
   const meetings = useMeetings();
   const colors = useColorMap();
@@ -95,7 +101,8 @@ export function AbsenceCalendar() {
     <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="de">
       <DateCalendar
         timezone={WG_TZ}
-        readOnly
+        value={value}
+        onChange={(d) => d && onChange?.(d)}
         slots={{ day: DayCell as unknown as typeof PickersDay }}
         slotProps={{
           day: { meetingDays, absenceBarsByDay, colors } as never,

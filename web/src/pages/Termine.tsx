@@ -1,6 +1,8 @@
+import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import HowToVoteRoundedIcon from "@mui/icons-material/HowToVoteRounded";
 import EventRoundedIcon from "@mui/icons-material/EventRounded";
+import FlightTakeoffRoundedIcon from "@mui/icons-material/FlightTakeoffRounded";
 import RepeatRoundedIcon from "@mui/icons-material/RepeatRounded";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -12,13 +14,14 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import Divider from "@mui/material/Divider";
-import Fab from "@mui/material/Fab";
 import IconButton from "@mui/material/IconButton";
 import MenuItem from "@mui/material/MenuItem";
+import SpeedDial from "@mui/material/SpeedDial";
+import SpeedDialAction from "@mui/material/SpeedDialAction";
 import Stack from "@mui/material/Stack";
+import Tab from "@mui/material/Tab";
+import Tabs from "@mui/material/Tabs";
 import TextField from "@mui/material/TextField";
-import ToggleButton from "@mui/material/ToggleButton";
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -53,8 +56,9 @@ const MODE = {
 export function Termine() {
   const navigate = useNavigate();
   const meetings = useMeetings();
-  const [view, setView] = useState<"list" | "calendar">("list");
+  const [view, setView] = useState<"list" | "calendar">("calendar");
   const [planOpen, setPlanOpen] = useState(false);
+  const [dialOpen, setDialOpen] = useState(false);
 
   const sorted = [...(meetings.data ?? [])].sort((a, b) => {
     const ta = a.startsAt ? dayjs(a.startsAt).valueOf() : Infinity;
@@ -64,16 +68,15 @@ export function Termine() {
 
   return (
     <Box sx={{ p: 2 }}>
-      <ToggleButtonGroup
+      <Tabs
         value={view}
-        exclusive
-        onChange={(_e, v) => v && setView(v)}
-        size="small"
+        onChange={(_e, v) => setView(v)}
+        variant="fullWidth"
         sx={{ mb: 2 }}
       >
-        <ToggleButton value="list">Liste</ToggleButton>
-        <ToggleButton value="calendar">Kalender</ToggleButton>
-      </ToggleButtonGroup>
+        <Tab value="calendar" label="Kalender" />
+        <Tab value="list" label="Liste" />
+      </Tabs>
 
       {view === "list" ? (
         sorted.length > 0 ? (
@@ -105,21 +108,40 @@ export function Termine() {
           <EmptyState title="Keine Termine" hint="Plane ein Treffen oder starte eine Umfrage." />
         )
       ) : (
-        <CalendarView onPlan={() => setPlanOpen(true)} />
+        <CalendarView />
       )}
 
       {view === "list" && (
         <AddFab label="Termin hinzufügen" onClick={() => navigate("/termine/neu")} />
       )}
       {view === "calendar" && (
-        <Fab
-          color="primary"
-          aria-label="Abwesenheit planen"
-          onClick={() => setPlanOpen(true)}
+        <SpeedDial
+          ariaLabel="Neu"
+          icon={<AddRoundedIcon />}
+          open={dialOpen}
+          onOpen={() => setDialOpen(true)}
+          onClose={() => setDialOpen(false)}
           sx={{ position: "fixed", bottom: 80, right: 16, zIndex: 1200 }}
         >
-          <EventRoundedIcon />
-        </Fab>
+          <SpeedDialAction
+            icon={<EventRoundedIcon />}
+            tooltipTitle="Neuer Termin"
+            tooltipOpen
+            onClick={() => {
+              setDialOpen(false);
+              navigate("/termine/neu");
+            }}
+          />
+          <SpeedDialAction
+            icon={<FlightTakeoffRoundedIcon />}
+            tooltipTitle="Abwesenheit planen"
+            tooltipOpen
+            onClick={() => {
+              setDialOpen(false);
+              setPlanOpen(true);
+            }}
+          />
+        </SpeedDial>
       )}
 
       <PlanAbsenceDialog open={planOpen} onClose={() => setPlanOpen(false)} />
@@ -127,21 +149,97 @@ export function Termine() {
   );
 }
 
-function CalendarView({ onPlan }: { onPlan: () => void }) {
+function CalendarView() {
+  const navigate = useNavigate();
   const { memberId } = useIdentity();
   const absences = useAbsences(memberId ?? undefined);
+  const allAbsences = useAbsences();
+  const meetings = useMeetings();
+  const members = useMembers();
   const remove = useDeleteAbsence();
   const now = dayjs();
+  const [selected, setSelected] = useState<Dayjs | null>(dayjs().tz(WG_TZ));
 
   const mine = [...(absences.data ?? [])]
     .filter((a) => dayjs(a.until).isAfter(now))
     .sort((a, b) => dayjs(a.from).valueOf() - dayjs(b.from).valueOf());
 
+  const selectedDay = selected?.tz(WG_TZ).startOf("day");
+  const dayMeetings = selectedDay
+    ? (meetings.data ?? []).filter(
+        (m) => m.startsAt && dayjs(m.startsAt).tz(WG_TZ).isSame(selectedDay, "day"),
+      )
+    : [];
+  const dayAbsences = selectedDay
+    ? (allAbsences.data ?? []).filter(
+        (a) =>
+          !selectedDay.isBefore(dayjs(a.from).tz(WG_TZ).startOf("day")) &&
+          !selectedDay.isAfter(dayjs(a.until).tz(WG_TZ).startOf("day")),
+      )
+    : [];
+
   return (
     <Box>
       <Card sx={{ p: 1 }}>
-        <AbsenceCalendar />
+        <AbsenceCalendar value={selected} onChange={setSelected} />
       </Card>
+
+      {selectedDay && (dayMeetings.length > 0 || dayAbsences.length > 0) && (
+        <>
+          <Typography variant="overline" sx={{ color: "text.secondary", display: "block", mt: 3, mb: 1 }}>
+            {formatDate(selectedDay.toISOString())}
+          </Typography>
+          <Card sx={{ px: 1 }}>
+            {dayMeetings.map((m, i) => {
+              const mode = MODE[m.mode];
+              return (
+                <CardActionArea
+                  key={m.id}
+                  onClick={() => navigate(`/termine/${m.id}`)}
+                  sx={{
+                    py: 1,
+                    px: 1,
+                    borderTop: i === 0 ? "none" : "1px solid",
+                    borderColor: "divider",
+                  }}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1.5}>
+                    {mode.icon}
+                    <Box sx={{ flex: 1 }}>
+                      <Typography>{m.title}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {m.startsAt ? formatDateTime(m.startsAt) : mode.label}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </CardActionArea>
+              );
+            })}
+            {dayAbsences.map((a, i) => (
+              <Stack
+                key={a.id}
+                direction="row"
+                alignItems="center"
+                spacing={1.5}
+                sx={{
+                  py: 1,
+                  px: 1,
+                  borderTop: i === 0 && dayMeetings.length === 0 ? "none" : "1px solid",
+                  borderColor: "divider",
+                }}
+              >
+                <Typography sx={{ flex: 1 }}>
+                  {members.data?.find((m) => m.id === a.memberId)?.displayName ?? "Unbekannt"}{" "}
+                  abwesend
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {formatDate(a.from)} – {formatDate(a.until)}
+                </Typography>
+              </Stack>
+            ))}
+          </Card>
+        </>
+      )}
 
       <Typography variant="overline" sx={{ color: "text.secondary", display: "block", mt: 3, mb: 1 }}>
         Meine Abwesenheiten
@@ -174,10 +272,6 @@ function CalendarView({ onPlan }: { onPlan: () => void }) {
           Keine geplanten Abwesenheiten.
         </Typography>
       )}
-
-      <Box sx={{ mt: 2 }}>
-        <Button onClick={onPlan}>Abwesenheit planen</Button>
-      </Box>
     </Box>
   );
 }

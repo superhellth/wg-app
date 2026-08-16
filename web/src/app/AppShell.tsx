@@ -26,7 +26,7 @@ const TABS = [
   { path: "/geld", label: "Ausgaben", icon: <PaymentsRoundedIcon /> },
   { path: "/putzplan", label: "Putzplan", icon: <CleaningServicesRoundedIcon /> },
   { path: "/einkaufen", label: "Einkaufen", icon: <ShoppingCartRoundedIcon /> },
-  { path: "/termine", label: "Termine", icon: <EventRoundedIcon /> },
+  { path: "/termine", label: "Kalender", icon: <EventRoundedIcon /> },
 ];
 
 const TITLES: Record<string, string> = {
@@ -34,7 +34,7 @@ const TITLES: Record<string, string> = {
   "/geld": "Ausgaben",
   "/putzplan": "Putzplan",
   "/einkaufen": "Einkaufen",
-  "/termine": "Termine",
+  "/termine": "Kalender",
   "/fixkosten": "Fixkosten",
   "/mitbewohner": "Mitbewohner",
   "/profil": "Profil",
@@ -118,7 +118,7 @@ export function AppShell() {
           left: 0,
           right: 0,
           zIndex: 1100,
-          px: 2,
+          px: 4,
           maxWidth: 640,
           mx: "auto",
         }}
