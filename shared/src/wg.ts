@@ -53,8 +53,8 @@ export type CreateWgResponse = z.infer<typeof createWgResponseSchema>;
 
 /**
  * Hard reset: wipe the entire WG (all members, money, chores, meetings,
- * shopping, activity, display config) back to a blank slate. Gated by a fixed
- * password so it can't be triggered casually.
+ * shopping, activity) back to a blank slate. Gated by a fixed password so it
+ * can't be triggered casually.
  */
 export const resetWgSchema = z.object({
   password: z.string().min(1),

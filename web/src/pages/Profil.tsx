@@ -1,11 +1,8 @@
-import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import NotificationsActiveRoundedIcon from "@mui/icons-material/NotificationsActiveRounded";
-import TvRoundedIcon from "@mui/icons-material/TvRounded";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
-import CardActionArea from "@mui/material/CardActionArea";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
@@ -43,7 +40,6 @@ import {
 } from "../lib/push.js";
 
 export function Profil() {
-  const navigate = useNavigate();
   const { memberId } = useIdentity();
   const members = useMembersMap();
   const update = useUpdateMember();
@@ -121,25 +117,6 @@ export function Profil() {
                 )}
               </Stack>
             )}
-          </Card>
-        </Box>
-
-        {/* Physical display */}
-        <Box>
-          <SectionLabel>Pi-Anzeige</SectionLabel>
-          <Card>
-            <CardActionArea onClick={() => navigate("/anzeige")} sx={{ p: 2 }}>
-              <Stack direction="row" alignItems="center" spacing={2}>
-                <TvRoundedIcon color="action" />
-                <Box sx={{ flex: 1 }}>
-                  <Typography sx={{ fontWeight: 600 }}>Tasten &amp; Display</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Tasten den Anzeige-Funktionen zuordnen
-                  </Typography>
-                </Box>
-                <ChevronRightRoundedIcon color="action" />
-              </Stack>
-            </CardActionArea>
           </Card>
         </Box>
 

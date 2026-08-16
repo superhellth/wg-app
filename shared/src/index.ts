@@ -15,4 +15,3 @@ export * from "./shopping.js";
 export * from "./chore.js";
 export * from "./meeting.js";
 export * from "./fixedCost.js";
-export * from "./display.js";

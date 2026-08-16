@@ -12,7 +12,6 @@ import { IdentityPicker } from "./pages/onboarding/IdentityPicker.js";
 import { Join } from "./pages/onboarding/Join.js";
 import { Landing } from "./pages/onboarding/Landing.js";
 import { Aktivitaet } from "./pages/Aktivitaet.js";
-import { Anzeige } from "./pages/Anzeige.js";
 import { ChoreForm } from "./pages/ChoreForm.js";
 import { Einkaufen } from "./pages/Einkaufen.js";
 import { ExpenseForm } from "./pages/ExpenseForm.js";
@@ -70,7 +69,6 @@ const router = createBrowserRouter([
           { path: "/fixkosten", element: <Fixkosten /> },
           { path: "/mitbewohner", element: <Mitbewohner /> },
           { path: "/profil", element: <Profil /> },
-          { path: "/anzeige", element: <Anzeige /> },
           { path: "/aktivitaet", element: <Aktivitaet /> },
         ],
       },

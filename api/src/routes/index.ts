@@ -4,7 +4,6 @@ import { activityRoutes } from "./activity.js";
 import { balancesRoutes } from "./balances.js";
 import { choresRoutes } from "./chores.js";
 import { devicesRoutes } from "./devices.js";
-import { displayRoutes } from "./display.js";
 import { expensesRoutes } from "./expenses.js";
 import { fixedCostsRoutes } from "./fixedCosts.js";
 import { inviteRedeemRoutes, invitesRoutes } from "./invites.js";
@@ -33,7 +32,6 @@ export async function registerRoutes(app: FastifyInstance) {
     await protectedApp.register(meetingsRoutes, { prefix: "/api/meetings" });
     await protectedApp.register(fixedCostsRoutes, { prefix: "/api/fixed-costs" });
     await protectedApp.register(activityRoutes, { prefix: "/api/activity" });
-    await protectedApp.register(displayRoutes, { prefix: "/api/display" });
     await protectedApp.register(wgConfigRoutes, { prefix: "/api/wg" });
     await protectedApp.register(wgResetRoutes, { prefix: "/api/wg" });
   });

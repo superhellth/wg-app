@@ -1,5 +1,4 @@
 # Shell scripts must keep LF endings or the container shebang (#!/bin/sh) breaks
-# when checked out on Windows. Same for the Pi display daemon.
+# when checked out on Windows.
 *.sh text eol=lf
 backup/backup.sh text eol=lf
-pi/display/*.py text eol=lf

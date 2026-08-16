@@ -112,7 +112,6 @@ export async function wgResetRoutes(app: FastifyInstance) {
       await tx.delete(schema.devices);
       await tx.delete(schema.invites);
       await tx.delete(schema.activity);
-      await tx.delete(schema.displayConfig);
       await tx.delete(schema.members);
       await tx.delete(schema.wg);
     });

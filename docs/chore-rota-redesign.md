@@ -140,11 +140,6 @@ Every mutation writes its change + `logActivity` in one transaction.
 - `chore.covered` — **new kind**; away-override or swap (executor ≠ assignee).
 - `chore.created` / `chore.updated` / `chore.deleted` / `chore.reminded` — as today.
 
-## Display
-
-The `chores` / *Putzplan* display function reads the new open turns (task → who's
-up). Shape is compatible; only a minor render tweak.
-
 ## Schema delta (summary)
 
 - `wg`: **add** `rotation uuid[]`, `graceDays int default 2`.
