@@ -38,6 +38,8 @@ export async function fixedCostsRoutes(app: FastifyInstance) {
           amount: body.amount,
           cycle: body.cycle,
           contractHolderId: body.contractHolderId,
+          nextDueAt: new Date(body.nextDueAt),
+          active: body.active,
         })
         .returning();
       await logActivity(tx, {
@@ -67,6 +69,8 @@ export async function fixedCostsRoutes(app: FastifyInstance) {
           amount: body.amount,
           cycle: body.cycle,
           contractHolderId: body.contractHolderId,
+          nextDueAt: new Date(body.nextDueAt),
+          active: body.active,
         })
         .where(eq(schema.fixedCosts.id, id))
         .returning();
