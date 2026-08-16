@@ -30,7 +30,7 @@ export function ActivityRow({ item }: { item: Activity }) {
           <Box component="span" sx={{ fontWeight: 700, color: color.ink }}>
             {name}
           </Box>{" "}
-          {activityText(item)}
+          {activityText(item, members)}
         </Typography>
         <Typography variant="caption" color="text.secondary">
           {fromNow(item.createdAt)}

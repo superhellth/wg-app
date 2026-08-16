@@ -283,7 +283,9 @@ export async function choresRoutes(app: FastifyInstance) {
         await logActivity(tx, {
           memberId: actor.id,
           kind: "chore.skipped",
-          data: { snapshot: { choreId: id, skippedMembers: result.skipped } },
+          data: {
+            snapshot: { choreId: id, choreName: chore.name, skippedMembers: result.skipped },
+          },
         });
       }
       return { chore, result };

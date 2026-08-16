@@ -1,8 +1,16 @@
-import type { Activity } from "@wg/shared";
+import type { Activity, Member } from "@wg/shared";
 import { formatCents } from "./format.js";
 
 function money(cents: unknown): string {
   return typeof cents === "number" ? formatCents(cents) : "";
+}
+
+function names(ids: unknown, members: Map<string, Member>): string {
+  if (!Array.isArray(ids)) return "";
+  return ids
+    .map((id) => (typeof id === "string" ? (members.get(id)?.displayName ?? "jemand") : null))
+    .filter((n): n is string => n !== null)
+    .join(", ");
 }
 
 /**
@@ -10,7 +18,7 @@ function money(cents: unknown): string {
  * (member name) is rendered separately by ActivityRow. Data shapes come from the
  * server snapshots; we read defensively.
  */
-export function activityText(a: Activity): string {
+export function activityText(a: Activity, members: Map<string, Member>): string {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const d = a.data as any;
   switch (a.kind) {
@@ -48,8 +56,13 @@ export function activityText(a: Activity): string {
       return "hat eine Aufgabe erledigt";
     case "chore.swapped":
       return "hat eine Aufgabe getauscht";
-    case "chore.skipped":
-      return "hat eine Aufgabe übersprungen";
+    case "chore.skipped": {
+      const choreName = d?.snapshot?.choreName ?? "Aufgabe";
+      const who = names(d?.snapshot?.skippedMembers, members);
+      return who
+        ? `hat „${choreName}" für ${who} übersprungen`
+        : `hat „${choreName}" übersprungen`;
+    }
     case "chore.reminded":
       return "hat an eine Aufgabe erinnert";
     case "meeting.created":
