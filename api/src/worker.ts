@@ -1,5 +1,6 @@
 import cron from "node-cron";
 import { runMeetingCleanup } from "./services/cleanup.js";
+import { runFixedCostGeneration } from "./services/fixedCostGeneration.js";
 import { runChoreGraceWarning, runMeetingReminders } from "./services/reminders.js";
 
 /**
@@ -25,10 +26,15 @@ cron.schedule("0 * * * *", () => runJob("chore-grace", runChoreGraceWarning));
 // Stale meeting cleanup: hourly, hard-delete fixed meetings >12h past.
 cron.schedule("0 * * * *", () => runJob("meeting-cleanup", runMeetingCleanup));
 
+// Fixed-cost generation: daily at 03:00, one expense per due cost
+// (catch-up jumps nextDueAt to the next future boundary, no backlog burst).
+cron.schedule("0 3 * * *", () => runJob("fixedcost-generation", runFixedCostGeneration));
+
 // Catch up immediately on startup (dedup markers prevent double-sends).
 runJob("meeting-reminders", runMeetingReminders);
 runJob("chore-grace", runChoreGraceWarning);
 runJob("meeting-cleanup", runMeetingCleanup);
+runJob("fixedcost-generation", runFixedCostGeneration);
 
 process.on("SIGTERM", () => process.exit(0));
 process.on("SIGINT", () => process.exit(0));
