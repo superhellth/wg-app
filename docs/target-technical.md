@@ -92,7 +92,8 @@ Conventions:
 
 Core tables (indicative):
 - `wg` — the single household (name, settings, WG secret).
-- `members` — id, display name, `archived_at`, `away_until` (auto-skip in chore rotations).
+- `members` — id, display name, `archived_at`.
+- `absences` — id, `member_id`, `from`, `until`, `created_at` (planned away spans; drives chore auto-skip).
 - `devices` — push subscription (`push_endpoint` unique / keys), current `member_id`.
 - `invites` — token (opaque random, 24h expiry, reusable), created_by.
 - `expenses` — payer, total, description, category.

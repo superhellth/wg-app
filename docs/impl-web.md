@@ -98,9 +98,10 @@ Three-state gate, identity in `localStorage` (`src/api/identity.ts`, reactive vi
 `Start` (dashboard) · `Geld` + `ExpenseForm` + `SettlementDialog` · `Putzplan` +
 `ChoreForm` (reorderable rotation) · `Einkaufen` (multi-select → bridge, Verlauf) ·
 `Termine` + `MeetingDetail` (approval poll vote/resolve, RSVP) + `MeetingForm`
-(3 modes, MUI date pickers) · `Fixkosten` (computed per-person share) ·
+(3 modes, MUI date pickers), list/Kalender toggle with `AbsenceCalendar` +
+absence planning dialog · `Fixkosten` (computed per-person share) ·
 `Mitbewohner` (roster, away, archive/restore, invite link copy/share) · `Profil`
-(identity switch, push, away) · `Aktivität` (cursor-paginated infinite feed,
+(identity switch, push) · `Aktivität` (cursor-paginated infinite feed,
 client-side name join, per-`kind` German strings in `lib/activityText.ts`).
 
 Shared components in `src/components/`: `MemberAvatar`, `MemberChip`, `MoneyText`

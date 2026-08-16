@@ -12,6 +12,8 @@ export const qk = {
   wgConfig: ["wgConfig"] as const,
   meetings: ["meetings"] as const,
   meeting: (id: string) => ["meetings", id] as const,
+  absences: (memberId?: string) => ["absences", { memberId: memberId ?? null }] as const,
+  absencesAll: ["absences"] as const,
   fixedCosts: ["fixedCosts"] as const,
   activity: ["activity"] as const,
 };

@@ -40,8 +40,17 @@ export const members = pgTable("members", {
   id: uuid("id").primaryKey().defaultRandom(),
   displayName: text("display_name").notNull(),
   archivedAt: timestamp("archived_at", { withTimezone: true }),
-  // if set and in the future, member is auto-skipped in all chore rotations
-  awayUntil: timestamp("away_until", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+/** Away periods for a member; overlapping ranges auto-skip chore rotation. */
+export const absences = pgTable("absences", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  memberId: uuid("member_id")
+    .references(() => members.id, { onDelete: "cascade" })
+    .notNull(),
+  from: timestamp("from", { withTimezone: true }).notNull(),
+  until: timestamp("until", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

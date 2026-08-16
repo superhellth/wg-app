@@ -57,6 +57,13 @@
       "when": 1786877061438,
       "tag": "0007_broad_madelyne_pryor",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786882896898,
+      "tag": "0008_silent_hemingway",
+      "breakpoints": true
     }
   ]
 }
