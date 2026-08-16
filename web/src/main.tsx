@@ -17,7 +17,6 @@ import { Einkaufen } from "./pages/Einkaufen.js";
 import { ExpenseForm } from "./pages/ExpenseForm.js";
 import { Fixkosten } from "./pages/Fixkosten.js";
 import { Geld } from "./pages/Geld.js";
-import { MeetingDetail } from "./pages/MeetingDetail.js";
 import { MeetingForm } from "./pages/MeetingForm.js";
 import { Mitbewohner } from "./pages/Mitbewohner.js";
 import { Profil } from "./pages/Profil.js";
@@ -64,7 +63,6 @@ const router = createBrowserRouter([
           { path: "/einkaufen", element: <Einkaufen /> },
           { path: "/termine", element: <Termine /> },
           { path: "/termine/neu", element: <MeetingForm /> },
-          { path: "/termine/:id", element: <MeetingDetail /> },
           { path: "/termine/:id/bearbeiten", element: <MeetingForm /> },
           { path: "/fixkosten", element: <Fixkosten /> },
           { path: "/mitbewohner", element: <Mitbewohner /> },

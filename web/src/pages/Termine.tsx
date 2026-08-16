@@ -131,7 +131,7 @@ function CalendarView() {
             {dayMeetings.map((m, i) => (
               <CardActionArea
                 key={m.id}
-                onClick={() => navigate(`/termine/${m.id}`)}
+                onClick={() => navigate(`/termine/${m.id}/bearbeiten`)}
                 sx={{
                   py: 1,
                   px: 1,
@@ -184,12 +184,24 @@ function CalendarView() {
           {sortedMeetings.length > 0 ? (
             <Stack spacing={1.5}>
               {sortedMeetings.map((m) => (
-                <Card key={m.id}>
-                  <CardActionArea sx={{ p: 2 }} onClick={() => navigate(`/termine/${m.id}`)}>
-                    <Typography variant="h6">{m.title}</Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                      {formatDateTime(m.startsAt)}
-                    </Typography>
+                <Card
+                  key={m.id}
+                  sx={{
+                    bgcolor: "rgba(91,79,233,0.07)",
+                    border: "1px solid rgba(91,79,233,0.16)",
+                  }}
+                >
+                  <CardActionArea
+                    sx={{ p: 2, display: "flex", alignItems: "center", gap: 2 }}
+                    onClick={() => navigate(`/termine/${m.id}/bearbeiten`)}
+                  >
+                    <EventRoundedIcon sx={{ color: "primary.main", fontSize: 34 }} />
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography sx={{ fontWeight: 700, lineHeight: 1.2 }}>{m.title}</Typography>
+                      <Typography color="text.secondary">
+                        {formatDateTime(m.startsAt)}
+                      </Typography>
+                    </Box>
                   </CardActionArea>
                 </Card>
               ))}

@@ -97,7 +97,7 @@ export function Start() {
       {/* Nächster Termin */}
       {nextMeeting && (
         <Card>
-          <CardActionArea onClick={() => navigate(`/termine/${nextMeeting.id}`)} sx={{ p: 2.5 }}>
+          <CardActionArea onClick={() => navigate(`/termine/${nextMeeting.id}/bearbeiten`)} sx={{ p: 2.5 }}>
             <SectionLabel>Nächster Termin</SectionLabel>
             <Typography variant="h6">{nextMeeting.title}</Typography>
             <Typography variant="body2" color="text.secondary">

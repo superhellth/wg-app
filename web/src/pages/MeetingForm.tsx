@@ -21,7 +21,13 @@ dayjs.extend(timezone);
 /** The WG lives in one place — pickers operate in Berlin regardless of device tz. */
 const WG_TZ = "Europe/Berlin";
 import { useNavigate, useParams } from "react-router-dom";
-import { useCreateMeeting, useMeeting, useUpdateMeeting } from "../api/meetings.js";
+import {
+  useCreateMeeting,
+  useDeleteMeeting,
+  useMeeting,
+  useUpdateMeeting,
+} from "../api/meetings.js";
+import { useConfirm } from "../components/ConfirmDialog.js";
 
 export function MeetingForm() {
   const navigate = useNavigate();
@@ -29,6 +35,8 @@ export function MeetingForm() {
   const isEdit = Boolean(id);
   const create = useCreateMeeting();
   const update = useUpdateMeeting();
+  const remove = useDeleteMeeting();
+  const confirm = useConfirm();
   const existing = useMeeting(id);
 
   const [title, setTitle] = useState("");
@@ -44,7 +52,7 @@ export function MeetingForm() {
     setStartsAt(dayjs(meeting.startsAt).tz(WG_TZ));
   }, [isEdit, meeting]);
 
-  const pending = create.isPending || update.isPending;
+  const pending = create.isPending || update.isPending || remove.isPending;
   const valid = title.trim() && Boolean(startsAt) && !pending;
 
   const submit = () => {
@@ -52,12 +60,24 @@ export function MeetingForm() {
       const body: UpdateMeeting = { title: title.trim(), startsAt: startsAt!.toISOString() };
       update.mutate(
         { id: id!, body },
-        { onSuccess: () => navigate(`/termine/${id}`, { replace: true }) },
+        { onSuccess: () => navigate("/termine", { replace: true }) },
       );
       return;
     }
     const body: CreateMeeting = { title: title.trim(), startsAt: startsAt!.toISOString() };
     create.mutate(body, { onSuccess: () => navigate("/termine", { replace: true }) });
+  };
+
+  const handleDelete = async () => {
+    if (!id) return;
+    const ok = await confirm({
+      title: "Termin löschen?",
+      body: "Diesen Termin wirklich löschen?",
+      confirmLabel: "Löschen",
+      confirmColor: "error",
+    });
+    if (!ok) return;
+    remove.mutate(id, { onSuccess: () => navigate("/termine", { replace: true }) });
   };
 
   if (isEdit && !meeting) return <Box sx={{ p: 2 }}>Lädt…</Box>;
@@ -95,9 +115,14 @@ export function MeetingForm() {
             {pending
               ? "Wird gespeichert…"
               : isEdit
-                ? "Speichern"
+                ? "Termin Speichern"
                 : "Termin erstellen"}
           </Button>
+          {isEdit && (
+            <Button color="error" disabled={pending} onClick={handleDelete}>
+              Termin löschen
+            </Button>
+          )}
         </Stack>
       </Box>
     </LocalizationProvider>
