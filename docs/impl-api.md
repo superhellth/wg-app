@@ -98,7 +98,7 @@ No `fastify-type-provider-zod` — explicit and dependency-light.
   (dead-subscription cleanup). No device = silent no-op.
 - **Fire-and-forget, post-commit** — push send happens *after* the DB transaction
   commits and never fails/rolls back the mutation; errors are logged.
-- **Triggers:** event-driven (chore turn started, new meeting/poll invite) fire
+- **Triggers:** event-driven (chore turn started, new meeting invite) fire
   **inline** in the API mutation; time-based (overdue, reminder) fire from the cron
   worker. `PushPayload` shape from `@wg/shared`. Money & shopping never push.
 
@@ -128,18 +128,13 @@ No `fastify-type-provider-zod` — explicit and dependency-light.
 
 ## Meetings
 
+- **Fixed events only:** `title` + `startsAt`, no mode, no recurrence, no polling.
+- **No RSVP / participation tracking** — just date + name.
 - **Reminders fixed:** invite push to all on create; reminder push **1h before** the
   event (`REMINDER_LEAD_MINUTES = 60`). No configurable lead time.
-- **fixed:** `startsAt` at creation; RSVPs open immediately.
-- **recurring:** single row (`startsAt` + `recurEveryDays`); **no per-occurrence
-  rows** in v1. RSVPs live on the one row; cron computes each occurrence for
-  reminders.
-- **poll:** ≥2 `meeting_options`, `startsAt` null. **Approval voting** — one
-  `meeting_votes` row per (member, option), members may vote several options.
-  **Resolve — `POST /api/meetings/:id/resolve` `{ optionId }`** (manual): sets
-  `meetings.startsAt` to that option's time (becomes fixed), log `poll.resolved`.
-- **RSVP:** `meeting_rsvps`, one row per member, upsert `yes|no`; attendees = `yes`.
-- Push: `meeting.created` / `poll.created` → invite to all; reminders via cron.
+- Push: `meeting.created` → invite to all; reminders via cron.
+- **Stale cleanup** (hourly, `runMeetingCleanup`): hard-delete meetings whose
+  `startsAt` is more than 12h in the past.
 
 ## Members
 
@@ -190,10 +185,8 @@ No `fastify-type-provider-zod` — explicit and dependency-light.
 - **Separate entrypoint / `worker` compose service** (same image as `api`,
   `command: node dist/worker.js`; see `deploy.md`), sharing `db`, `services`, and
   `sendPushToMember`; uses `node-cron`. Dispatch lives in `services/reminders.ts`.
-- **Meeting reminder** (~every 5 min): per meeting compute the next occurrence
-  (fixed: `startsAt`; recurring: next `startsAt + k·recurEveryDays ≥ now`;
-  unresolved poll: skip). If `occurrence − now ≤ 60min` and not yet reminded for
-  *that* occurrence (`meetings.lastReminderAt`), push + record.
+- **Meeting reminder** (~every 5 min): if `startsAt − now ≤ 60min` and not yet
+  reminded (`meetings.lastReminderAt IS NULL`), push all active members + record.
 - **Chore overdue** (hourly): rows with `completedAt IS NULL AND skippedAt IS NULL
   AND now ≥ dueAt + 24h AND overdueNotifiedAt IS NULL` → push assignee, set marker.
 - Event-driven pushes stay **inline in the API**, not here.

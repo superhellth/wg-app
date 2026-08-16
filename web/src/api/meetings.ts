@@ -1,67 +1,15 @@
-import type {
-  CreateMeeting,
-  Meeting,
-  ResolvePoll,
-  Rsvp,
-  UpdateMeeting,
-  Vote,
-} from "@wg/shared";
+import type { CreateMeeting, Meeting, UpdateMeeting } from "@wg/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { http } from "./client.js";
 import { qk } from "./keys.js";
 
-export interface MeetingOption {
-  id: string;
-  meetingId: string;
-  optionTime: string;
-}
-export interface MeetingVote {
-  id: string;
-  optionId: string;
-  memberId: string;
-}
-export interface MeetingRsvp {
-  id: string;
-  meetingId: string;
-  memberId: string;
-  value: "yes" | "no";
-}
-export interface MeetingDetail {
-  meeting: Meeting;
-  options: MeetingOption[];
-  rsvps: MeetingRsvp[];
-  votes: MeetingVote[];
-}
-/** List item carries rsvps so cards can show participation without a detail fetch. */
-export type MeetingListItem = Meeting & { rsvps: MeetingRsvp[] };
-
 export const meetingsApi = {
-  list: () => http<MeetingListItem[]>("/api/meetings"),
-  get: (id: string) => http<MeetingDetail>(`/api/meetings/${id}`),
+  list: () => http<Meeting[]>("/api/meetings"),
+  get: (id: string) => http<Meeting>(`/api/meetings/${id}`),
   create: (body: CreateMeeting) =>
     http<Meeting>("/api/meetings", { method: "POST", body: JSON.stringify(body) }),
   update: (id: string, body: UpdateMeeting) =>
     http<Meeting>(`/api/meetings/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(body),
-    }),
-  resolve: (id: string, body: ResolvePoll) =>
-    http<Meeting>(`/api/meetings/${id}/resolve`, {
-      method: "POST",
-      body: JSON.stringify(body),
-    }),
-  vote: (id: string, body: Vote) =>
-    http<void>(`/api/meetings/${id}/votes`, {
-      method: "POST",
-      body: JSON.stringify(body),
-    }),
-  unvote: (id: string, body: Vote) =>
-    http<void>(`/api/meetings/${id}/votes`, {
-      method: "DELETE",
-      body: JSON.stringify(body),
-    }),
-  rsvp: (id: string, body: Rsvp) =>
-    http<void>(`/api/meetings/${id}/rsvp`, {
       method: "PUT",
       body: JSON.stringify(body),
     }),
@@ -103,20 +51,4 @@ export function useUpdateMeeting() {
     },
   });
 }
-export const useResolvePoll = () =>
-  useMeetingMutation(({ id, body }: { id: string; body: ResolvePoll }) =>
-    meetingsApi.resolve(id, body),
-  );
-export const useVote = () =>
-  useMeetingMutation(({ id, body }: { id: string; body: Vote }) =>
-    meetingsApi.vote(id, body),
-  );
-export const useUnvote = () =>
-  useMeetingMutation(({ id, body }: { id: string; body: Vote }) =>
-    meetingsApi.unvote(id, body),
-  );
-export const useRsvp = () =>
-  useMeetingMutation(({ id, body }: { id: string; body: Rsvp }) =>
-    meetingsApi.rsvp(id, body),
-  );
 export const useDeleteMeeting = () => useMeetingMutation(meetingsApi.remove);

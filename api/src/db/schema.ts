@@ -1,8 +1,6 @@
 import {
   BILLING_CYCLES,
-  MEETING_MODES,
   type PushKeys,
-  RSVP_VALUES,
   SPLIT_TYPES,
 } from "@wg/shared";
 import {
@@ -19,8 +17,6 @@ import {
 
 // ── enums (values sourced from @wg/shared — single source of truth) ──
 export const splitTypeEnum = pgEnum("split_type", SPLIT_TYPES);
-export const meetingModeEnum = pgEnum("meeting_mode", MEETING_MODES);
-export const rsvpEnum = pgEnum("rsvp", RSVP_VALUES);
 export const billingCycleEnum = pgEnum("billing_cycle", BILLING_CYCLES);
 
 // ── core ────────────────────────────────────────────────────────────
@@ -152,32 +148,11 @@ export const choreTurns = pgTable("chore_turns", {
 export const meetings = pgTable("meetings", {
   id: uuid("id").primaryKey().defaultRandom(),
   title: text("title").notNull(),
-  mode: meetingModeEnum("mode").notNull(),
-  startsAt: timestamp("starts_at", { withTimezone: true }),
-  recurEveryDays: integer("recur_every_days"),
-  // occurrence time of the last reminder sent (dedup; recurring-safe)
+  startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+  // occurrence time of the last reminder sent (dedup)
   lastReminderAt: timestamp("last_reminder_at", { withTimezone: true }),
   createdByMemberId: uuid("created_by_member_id").references(() => members.id).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
-
-export const meetingOptions = pgTable("meeting_options", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  meetingId: uuid("meeting_id").references(() => meetings.id, { onDelete: "cascade" }).notNull(),
-  optionTime: timestamp("option_time", { withTimezone: true }).notNull(),
-});
-
-export const meetingVotes = pgTable("meeting_votes", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  optionId: uuid("option_id").references(() => meetingOptions.id, { onDelete: "cascade" }).notNull(),
-  memberId: uuid("member_id").references(() => members.id).notNull(),
-});
-
-export const meetingRsvps = pgTable("meeting_rsvps", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  meetingId: uuid("meeting_id").references(() => meetings.id, { onDelete: "cascade" }).notNull(),
-  memberId: uuid("member_id").references(() => members.id).notNull(),
-  value: rsvpEnum("value").notNull(),
 });
 
 // ── activity feed (append-only; also the audit trail) ───────────────

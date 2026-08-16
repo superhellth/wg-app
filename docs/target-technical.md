@@ -59,8 +59,8 @@
 ### Cron worker
 - A scheduled worker (the separate `worker` container running node-cron) for **time-based push**:
   - Chore **overdue** check (push once, 1 day after due).
-  - Meeting **reminder** (fixed 1h before each occurrence).
-- Event-driven push (chore turn started, new meeting/poll) fires inline from the relevant API mutation.
+  - Meeting **reminder** (fixed 1h before).
+- Event-driven push (chore turn started, new meeting) fires inline from the relevant API mutation.
 
 ---
 
@@ -103,9 +103,7 @@ Core tables (indicative):
 - `shopping_items` — name only; `bought_at` moves items to history.
 - `chores` — frequency, rotation order.
 - `chore_turns` — assignee, `rotation_index`, due date, `completed_at`, `skipped_at`, `overdue_notified_at`.
-- `meetings` — fixed / recurring / poll; `last_reminder_at` (reminder dedup; fixed 1h lead).
-- `meeting_options` + `meeting_votes` — poll mode.
-- `meeting_rsvps` — yes / no per member.
+- `meetings` — fixed events only (title, `starts_at`); `last_reminder_at` (reminder dedup; fixed 1h lead).
 - `activity` — append-only feed.
 
 ---
@@ -119,7 +117,7 @@ Core tables (indicative):
 | Trigger | Source |
 |---------|--------|
 | Chore turn started | event-driven (someone marked previous turn done) |
-| New meeting / poll invite | event-driven |
+| New meeting invite | event-driven |
 | Chore overdue (once, 1 day after due) | cron worker |
 | Meeting reminder (1h before) | cron worker |
 

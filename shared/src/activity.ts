@@ -34,8 +34,6 @@ export const ACTIVITY_KINDS = [
   "meeting.created",
   "meeting.updated",
   "meeting.deleted",
-  "poll.created",
-  "poll.resolved",
   "fixedcost.added",
   "fixedcost.updated",
   "fixedcost.deleted",

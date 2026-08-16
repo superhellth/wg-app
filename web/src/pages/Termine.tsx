@@ -1,10 +1,8 @@
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
-import HowToVoteRoundedIcon from "@mui/icons-material/HowToVoteRounded";
 import EventRoundedIcon from "@mui/icons-material/EventRounded";
 import FlightTakeoffRoundedIcon from "@mui/icons-material/FlightTakeoffRounded";
-import RepeatRoundedIcon from "@mui/icons-material/RepeatRounded";
 import Accordion from "@mui/material/Accordion";
 import AccordionDetails from "@mui/material/AccordionDetails";
 import AccordionSummary from "@mui/material/AccordionSummary";
@@ -12,12 +10,10 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardActionArea from "@mui/material/CardActionArea";
-import Chip from "@mui/material/Chip";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
-import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
 import MenuItem from "@mui/material/MenuItem";
 import SpeedDial from "@mui/material/SpeedDial";
@@ -39,7 +35,6 @@ import { useMeetings } from "../api/meetings.js";
 import { useMembers } from "../api/members.js";
 import { AbsenceCalendar } from "../components/AbsenceCalendar.js";
 import { EmptyState } from "../components/EmptyState.js";
-import { ParticipationChips } from "../components/ParticipationChips.js";
 import { formatDate, formatDateTime } from "../lib/format.js";
 
 dayjs.extend(utc);
@@ -47,12 +42,6 @@ dayjs.extend(timezone);
 
 /** The WG lives in one place — operate on Berlin days regardless of device tz. */
 const WG_TZ = "Europe/Berlin";
-
-const MODE = {
-  fixed: { label: "Termin", icon: <EventRoundedIcon fontSize="small" /> },
-  recurring: { label: "Wiederkehrend", icon: <RepeatRoundedIcon fontSize="small" /> },
-  poll: { label: "Umfrage", icon: <HowToVoteRoundedIcon fontSize="small" /> },
-};
 
 export function Termine() {
   const navigate = useNavigate();
@@ -111,17 +100,13 @@ function CalendarView() {
     .filter((a) => dayjs(a.until).isAfter(now))
     .sort((a, b) => dayjs(a.from).valueOf() - dayjs(b.from).valueOf());
 
-  const sortedMeetings = [...(meetings.data ?? [])].sort((a, b) => {
-    const ta = a.startsAt ? dayjs(a.startsAt).valueOf() : Infinity;
-    const tb = b.startsAt ? dayjs(b.startsAt).valueOf() : Infinity;
-    return ta - tb;
-  });
+  const sortedMeetings = [...(meetings.data ?? [])].sort(
+    (a, b) => dayjs(a.startsAt).valueOf() - dayjs(b.startsAt).valueOf(),
+  );
 
   const selectedDay = selected?.tz(WG_TZ).startOf("day");
   const dayMeetings = selectedDay
-    ? (meetings.data ?? []).filter(
-        (m) => m.startsAt && dayjs(m.startsAt).tz(WG_TZ).isSame(selectedDay, "day"),
-      )
+    ? (meetings.data ?? []).filter((m) => dayjs(m.startsAt).tz(WG_TZ).isSame(selectedDay, "day"))
     : [];
   const dayAbsences = selectedDay
     ? (allAbsences.data ?? []).filter(
@@ -143,31 +128,28 @@ function CalendarView() {
             {formatDate(selectedDay.toISOString())}
           </Typography>
           <Card sx={{ px: 1 }}>
-            {dayMeetings.map((m, i) => {
-              const mode = MODE[m.mode];
-              return (
-                <CardActionArea
-                  key={m.id}
-                  onClick={() => navigate(`/termine/${m.id}`)}
-                  sx={{
-                    py: 1,
-                    px: 1,
-                    borderTop: i === 0 ? "none" : "1px solid",
-                    borderColor: "divider",
-                  }}
-                >
-                  <Stack direction="row" alignItems="center" spacing={1.5}>
-                    {mode.icon}
-                    <Box sx={{ flex: 1 }}>
-                      <Typography>{m.title}</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {m.startsAt ? formatDateTime(m.startsAt) : mode.label}
-                      </Typography>
-                    </Box>
-                  </Stack>
-                </CardActionArea>
-              );
-            })}
+            {dayMeetings.map((m, i) => (
+              <CardActionArea
+                key={m.id}
+                onClick={() => navigate(`/termine/${m.id}`)}
+                sx={{
+                  py: 1,
+                  px: 1,
+                  borderTop: i === 0 ? "none" : "1px solid",
+                  borderColor: "divider",
+                }}
+              >
+                <Stack direction="row" alignItems="center" spacing={1.5}>
+                  <EventRoundedIcon fontSize="small" />
+                  <Box sx={{ flex: 1 }}>
+                    <Typography>{m.title}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {formatDateTime(m.startsAt)}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </CardActionArea>
+            ))}
             {dayAbsences.map((a, i) => (
               <Stack
                 key={a.id}
@@ -201,31 +183,19 @@ function CalendarView() {
         <AccordionDetails sx={{ px: 2, pb: 2 }}>
           {sortedMeetings.length > 0 ? (
             <Stack spacing={1.5}>
-              {sortedMeetings.map((m) => {
-                const mode = MODE[m.mode];
-                return (
-                  <Card key={m.id}>
-                    <CardActionArea sx={{ p: 2 }} onClick={() => navigate(`/termine/${m.id}`)}>
-                      <Stack direction="row" alignItems="center" spacing={1}>
-                        <Typography variant="h6" sx={{ flex: 1 }}>{m.title}</Typography>
-                        <Chip icon={mode.icon} label={mode.label} size="small" variant="outlined" />
-                      </Stack>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                        {m.startsAt ? formatDateTime(m.startsAt) : "Noch kein Termin — abstimmen"}
-                      </Typography>
-                      {m.startsAt && (
-                        <>
-                          <Divider sx={{ my: 1.5 }} />
-                          <ParticipationChips rsvps={m.rsvps} />
-                        </>
-                      )}
-                    </CardActionArea>
-                  </Card>
-                );
-              })}
+              {sortedMeetings.map((m) => (
+                <Card key={m.id}>
+                  <CardActionArea sx={{ p: 2 }} onClick={() => navigate(`/termine/${m.id}`)}>
+                    <Typography variant="h6">{m.title}</Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                      {formatDateTime(m.startsAt)}
+                    </Typography>
+                  </CardActionArea>
+                </Card>
+              ))}
             </Stack>
           ) : (
-            <EmptyState title="Keine Termine" hint="Plane ein Treffen oder starte eine Umfrage." />
+            <EmptyState title="Keine Termine" hint="Plane ein Treffen." />
           )}
         </AccordionDetails>
       </Accordion>

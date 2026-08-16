@@ -1,12 +1,9 @@
-import CancelRoundedIcon from "@mui/icons-material/CancelRounded";
-import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardActionArea from "@mui/material/CardActionArea";
 import Chip from "@mui/material/Chip";
-import Divider from "@mui/material/Divider";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import dayjs from "dayjs";
@@ -14,12 +11,11 @@ import { useNavigate } from "react-router-dom";
 import { useIdentity } from "../api/identity.js";
 import { useBalances } from "../api/balances.js";
 import { useChores, useChoreDone } from "../api/chores.js";
-import { useMeeting, useMeetings, useRsvp } from "../api/meetings.js";
+import { useMeetings } from "../api/meetings.js";
 import { useMembersMap } from "../api/members.js";
 import { useRecentActivity } from "../api/activity.js";
 import { ActivityRow } from "../components/ActivityRow.js";
 import { MoneyText } from "../components/MoneyText.js";
-import { ParticipationChips } from "../components/ParticipationChips.js";
 import { SectionLabel } from "../components/SectionLabel.js";
 import { formatDate, formatDateTime } from "../lib/format.js";
 
@@ -32,7 +28,6 @@ export function Start() {
   const meetings = useMeetings();
   const activity = useRecentActivity(8);
   const choreDone = useChoreDone();
-  const rsvp = useRsvp();
 
   const me = memberId ? members.get(memberId) : undefined;
   const myBalance = (memberId && balances.data?.balances[memberId]) || 0;
@@ -43,14 +38,8 @@ export function Start() {
       (c.currentTurn.executorId ?? c.currentTurn.assigneeId) === memberId,
   );
   const nextMeeting = (meetings.data ?? [])
-    .filter((m) => m.startsAt && dayjs(m.startsAt).isAfter(dayjs()))
-    .sort((a, b) => dayjs(a.startsAt!).valueOf() - dayjs(b.startsAt!).valueOf())[0];
-
-  // Pull the next meeting's detail so the Ja/Nein buttons reflect my current RSVP
-  // (the meetings list carries no rsvps). The rsvp mutation invalidates the
-  // meetings key by prefix, so this refetches and restyles on change.
-  const nextDetail = useMeeting(nextMeeting?.id);
-  const myRsvp = nextDetail.data?.rsvps.find((r) => r.memberId === memberId)?.value;
+    .filter((m) => dayjs(m.startsAt).isAfter(dayjs()))
+    .sort((a, b) => dayjs(a.startsAt).valueOf() - dayjs(b.startsAt).valueOf())[0];
 
   return (
     <Stack spacing={2.5} sx={{ p: 2 }}>
@@ -107,38 +96,14 @@ export function Start() {
 
       {/* Nächster Termin */}
       {nextMeeting && (
-        <Card sx={{ p: 2.5 }}>
-          <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
+        <Card>
+          <CardActionArea onClick={() => navigate(`/termine/${nextMeeting.id}`)} sx={{ p: 2.5 }}>
             <SectionLabel>Nächster Termin</SectionLabel>
-            <Stack direction="row" spacing={1} sx={{ mt: -0.5 }}>
-              <Button
-                size="small"
-                color="success"
-                aria-label="Zusagen"
-                variant={myRsvp === "yes" ? "contained" : "outlined"}
-                onClick={() => rsvp.mutate({ id: nextMeeting.id, body: { value: "yes" } })}
-                sx={{ minWidth: 0, px: 1 }}
-              >
-                <CheckCircleRoundedIcon fontSize="small" />
-              </Button>
-              <Button
-                size="small"
-                color="error"
-                aria-label="Absagen"
-                variant={myRsvp === "no" ? "contained" : "outlined"}
-                onClick={() => rsvp.mutate({ id: nextMeeting.id, body: { value: "no" } })}
-                sx={{ minWidth: 0, px: 1 }}
-              >
-                <CancelRoundedIcon fontSize="small" />
-              </Button>
-            </Stack>
-          </Stack>
-          <Typography variant="h6">{nextMeeting.title}</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {nextMeeting.startsAt ? formatDateTime(nextMeeting.startsAt) : ""}
-          </Typography>
-          <Divider sx={{ my: 1.5 }} />
-          <ParticipationChips rsvps={nextDetail.data?.rsvps ?? []} />
+            <Typography variant="h6">{nextMeeting.title}</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {formatDateTime(nextMeeting.startsAt)}
+            </Typography>
+          </CardActionArea>
         </Card>
       )}
 

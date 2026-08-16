@@ -75,10 +75,6 @@ export function activityText(a: Activity, members: Map<string, Member>): string 
       return `hat „${d?.after?.title ?? "Termin"}" bearbeitet`;
     case "meeting.deleted":
       return `hat „${d?.snapshot?.title ?? "Termin"}" gelöscht`;
-    case "poll.created":
-      return `hat die Umfrage „${d?.snapshot?.title ?? ""}" gestartet`;
-    case "poll.resolved":
-      return "hat eine Umfrage aufgelöst";
     case "fixedcost.added":
       return `hat „${d?.snapshot?.name ?? "Fixkosten"}" zu den Fixkosten hinzugefügt`;
     case "fixedcost.updated":

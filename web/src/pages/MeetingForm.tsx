@@ -1,19 +1,15 @@
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
-import AddRoundedIcon from "@mui/icons-material/AddRounded";
-import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
-import ToggleButton from "@mui/material/ToggleButton";
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
-import type { CreateMeeting, MeetingMode, UpdateMeeting } from "@wg/shared";
+import type { CreateMeeting, UpdateMeeting } from "@wg/shared";
 import dayjs, { type Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
@@ -25,18 +21,7 @@ dayjs.extend(timezone);
 /** The WG lives in one place — pickers operate in Berlin regardless of device tz. */
 const WG_TZ = "Europe/Berlin";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  useCreateMeeting,
-  useMeeting,
-  useUpdateMeeting,
-} from "../api/meetings.js";
-import { SectionLabel } from "../components/SectionLabel.js";
-
-const MODES: { value: MeetingMode; label: string }[] = [
-  { value: "fixed", label: "Fest" },
-  { value: "recurring", label: "Wiederkehrend" },
-  { value: "poll", label: "Umfrage" },
-];
+import { useCreateMeeting, useMeeting, useUpdateMeeting } from "../api/meetings.js";
 
 export function MeetingForm() {
   const navigate = useNavigate();
@@ -47,62 +32,31 @@ export function MeetingForm() {
   const existing = useMeeting(id);
 
   const [title, setTitle] = useState("");
-  const [mode, setMode] = useState<MeetingMode>("fixed");
   const [startsAt, setStartsAt] = useState<Dayjs | null>(
     dayjs().tz(WG_TZ).add(1, "day").hour(19).minute(0).second(0),
   );
-  const [recurEveryDays, setRecurEveryDays] = useState("7");
-  const [options, setOptions] = useState<(Dayjs | null)[]>([
-    dayjs().tz(WG_TZ).add(1, "day").hour(19).minute(0).second(0),
-    dayjs().tz(WG_TZ).add(2, "day").hour(19).minute(0).second(0),
-  ]);
 
   // Prefill from the existing meeting when editing.
-  const meeting = existing.data?.meeting;
+  const meeting = existing.data;
   useEffect(() => {
     if (!isEdit || !meeting) return;
     setTitle(meeting.title);
-    setMode(meeting.mode);
-    if (meeting.startsAt) setStartsAt(dayjs(meeting.startsAt).tz(WG_TZ));
-    if (meeting.recurEveryDays) setRecurEveryDays(String(meeting.recurEveryDays));
+    setStartsAt(dayjs(meeting.startsAt).tz(WG_TZ));
   }, [isEdit, meeting]);
 
-  // An unresolved poll has no fixed time yet — only the title is editable.
-  const isUnresolvedPoll = mode === "poll" && !meeting?.startsAt;
-  const editableTimeFields = !isEdit || !isUnresolvedPoll;
-
   const pending = create.isPending || update.isPending;
-  const valid =
-    title.trim() &&
-    (isEdit
-      ? isUnresolvedPoll || Boolean(startsAt)
-      : mode === "poll"
-        ? options.filter(Boolean).length >= 2
-        : Boolean(startsAt)) &&
-    (mode !== "recurring" || Number(recurEveryDays) > 0) &&
-    !pending;
+  const valid = title.trim() && Boolean(startsAt) && !pending;
 
   const submit = () => {
     if (isEdit) {
-      const body: UpdateMeeting = {
-        title: title.trim(),
-        ...(isUnresolvedPoll ? {} : { startsAt: startsAt!.toISOString() }),
-        ...(mode === "recurring" ? { recurEveryDays: Number(recurEveryDays) } : {}),
-      };
+      const body: UpdateMeeting = { title: title.trim(), startsAt: startsAt!.toISOString() };
       update.mutate(
         { id: id!, body },
         { onSuccess: () => navigate(`/termine/${id}`, { replace: true }) },
       );
       return;
     }
-    const body: CreateMeeting = {
-      title: title.trim(),
-      mode,
-      ...(mode === "poll"
-        ? { options: options.filter(Boolean).map((d) => d!.toISOString()) }
-        : { startsAt: startsAt!.toISOString() }),
-      ...(mode === "recurring" ? { recurEveryDays: Number(recurEveryDays) } : {}),
-    };
+    const body: CreateMeeting = { title: title.trim(), startsAt: startsAt!.toISOString() };
     create.mutate(body, { onSuccess: () => navigate("/termine", { replace: true }) });
   };
 
@@ -128,84 +82,13 @@ export function MeetingForm() {
             fullWidth
           />
 
-          <Box>
-            <SectionLabel>Art</SectionLabel>
-            <ToggleButtonGroup
-              value={mode}
-              exclusive
-              onChange={(_, v) => v && setMode(v)}
-              fullWidth
-              size="small"
-              disabled={isEdit}
-            >
-              {MODES.map((m) => (
-                <ToggleButton key={m.value} value={m.value}>{m.label}</ToggleButton>
-              ))}
-            </ToggleButtonGroup>
-          </Box>
-
-          {mode !== "poll" && (
-            <DateTimePicker
-              label="Wann?"
-              value={startsAt}
-              onChange={setStartsAt}
-              timezone={WG_TZ}
-              ampm={false}
-            />
-          )}
-
-          {mode === "recurring" && (
-            <TextField
-              label="Wiederholung alle (Tage)"
-              value={recurEveryDays}
-              onChange={(e) => setRecurEveryDays(e.target.value.replace(/\D/g, ""))}
-              inputMode="numeric"
-              sx={{ width: 220 }}
-            />
-          )}
-
-          {mode === "poll" && !editableTimeFields && (
-            <Typography variant="body2" color="text.secondary">
-              Die Vorschläge einer Umfrage lassen sich nicht ändern. Lege die Zeit
-              fest oder erstelle eine neue Umfrage.
-            </Typography>
-          )}
-
-          {mode === "poll" && editableTimeFields && !isEdit && (
-            <Box>
-              <SectionLabel>Vorschläge</SectionLabel>
-              <Stack spacing={1.5}>
-                {options.map((opt, i) => (
-                  <Stack key={i} direction="row" spacing={1} alignItems="center">
-                    <DateTimePicker
-                      value={opt}
-                      onChange={(v) =>
-                        setOptions((p) => p.map((o, j) => (j === i ? v : o)))
-                      }
-                      timezone={WG_TZ}
-                      ampm={false}
-                      sx={{ flex: 1 }}
-                    />
-                    <IconButton
-                      onClick={() => setOptions((p) => p.filter((_, j) => j !== i))}
-                      disabled={options.length <= 2}
-                    >
-                      <DeleteOutlineRoundedIcon />
-                    </IconButton>
-                  </Stack>
-                ))}
-                <Button
-                  startIcon={<AddRoundedIcon />}
-                  onClick={() =>
-                    setOptions((p) => [...p, dayjs().add(p.length + 1, "day").hour(19).minute(0)])
-                  }
-                  sx={{ alignSelf: "flex-start" }}
-                >
-                  Vorschlag hinzufügen
-                </Button>
-              </Stack>
-            </Box>
-          )}
+          <DateTimePicker
+            label="Wann?"
+            value={startsAt}
+            onChange={setStartsAt}
+            timezone={WG_TZ}
+            ampm={false}
+          />
 
           <Divider />
           <Button variant="contained" size="large" disabled={!valid} onClick={submit}>

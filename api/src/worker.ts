@@ -4,7 +4,7 @@ import { runChoreGraceWarning, runMeetingReminders } from "./services/reminders.
 
 /**
  * Cron worker — time-based push only (chore overdue, meeting reminders).
- * Event-driven push (turn started, new meeting/poll) fires inline from the API,
+ * Event-driven push (turn started, new meeting) fires inline from the API,
  * not here. See docs/impl-api.md §cron for the dispatch rules.
  */
 

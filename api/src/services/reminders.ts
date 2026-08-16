@@ -5,71 +5,29 @@ import { sendPushToMember } from "../lib/push.js";
 const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
 
-type MeetingRow = typeof schema.meetings.$inferSelect;
-
 /**
- * Next occurrence of a meeting at/after `now`:
- *  - unresolved poll (startsAt null) → null (skip)
- *  - fixed → startsAt, only if still in the future
- *  - recurring → first startsAt + k·recurEveryDays that is >= now
- */
-export function nextOccurrence(m: MeetingRow, now: Date): Date | null {
-  if (!m.startsAt) return null;
-  const start = m.startsAt.getTime();
-  if (!m.recurEveryDays) {
-    return start >= now.getTime() ? m.startsAt : null;
-  }
-  const stepMs = m.recurEveryDays * DAY_MS;
-  if (start >= now.getTime()) return m.startsAt;
-  const k = Math.ceil((now.getTime() - start) / stepMs);
-  return new Date(start + k * stepMs);
-}
-
-/** Reminder recipients: active members who haven't RSVP'd "no". */
-async function reminderRecipients(meetingId: string): Promise<string[]> {
-  const active = await db
-    .select({ id: schema.members.id })
-    .from(schema.members)
-    .where(isNull(schema.members.archivedAt));
-  const rsvps = await db
-    .select()
-    .from(schema.meetingRsvps)
-    .where(eq(schema.meetingRsvps.meetingId, meetingId));
-  const declined = new Set(
-    rsvps.filter((r) => r.value === "no").map((r) => r.memberId),
-  );
-  return active.map((m) => m.id).filter((id) => !declined.has(id));
-}
-
-/**
- * Meeting reminders — run every ~5 min. Push 1h before each occurrence, once per
- * occurrence (dedup via meetings.lastReminderAt = the occurrence reminded).
+ * Meeting reminders — run every ~5 min. Push 1h before each meeting, once per
+ * meeting (dedup via meetings.lastReminderAt).
  */
 export async function runMeetingReminders(now = new Date()): Promise<void> {
   const meetings = await db.select().from(schema.meetings);
   for (const m of meetings) {
-    const occurrence = nextOccurrence(m, now);
-    if (!occurrence) continue;
-
-    const lead = occurrence.getTime() - now.getTime();
+    const lead = m.startsAt.getTime() - now.getTime();
     if (lead < 0 || lead > HOUR_MS) continue; // not within the hour before
-    if (m.lastReminderAt && m.lastReminderAt.getTime() >= occurrence.getTime()) {
-      continue; // already reminded for this occurrence
-    }
+    if (m.lastReminderAt) continue; // already reminded
 
     // Record first so a slow push can't double-fire on the next tick.
     await db
       .update(schema.meetings)
-      .set({ lastReminderAt: occurrence })
+      .set({ lastReminderAt: m.startsAt })
       .where(eq(schema.meetings.id, m.id));
 
-    const recipients = await reminderRecipients(m.id);
-    const payload = {
-      title: "Erinnerung: Treffen",
-      body: m.title,
-      url: "/meetings",
-    };
-    await Promise.all(recipients.map((id) => sendPushToMember(id, payload)));
+    const active = await db
+      .select({ id: schema.members.id })
+      .from(schema.members)
+      .where(isNull(schema.members.archivedAt));
+    const payload = { title: "Erinnerung: Treffen", body: m.title, url: "/meetings" };
+    await Promise.all(active.map((a) => sendPushToMember(a.id, payload)));
   }
 }
 

@@ -88,7 +88,7 @@ export function AppShell() {
             >
               <ListItemText
                 primary={me?.displayName ?? "Unbekannt"}
-                secondary="Angemeldet als · wechseln"
+                secondary="Benutzer wechseln"
               />
             </MenuItem>
             <Divider />

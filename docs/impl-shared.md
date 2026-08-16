@@ -30,8 +30,7 @@ export const SPLIT_TYPES = ["equal","exact","shares","percent"] as const;
 export const splitType = z.enum(SPLIT_TYPES);
 ```
 
-Arrays: `SPLIT_TYPES`, `CHORE_FREQUENCIES`, `MEETING_MODES`, `RSVP_VALUES`,
-`BILLING_CYCLES`.
+Arrays: `SPLIT_TYPES`, `CHORE_FREQUENCIES`, `BILLING_CYCLES`.
 
 ## Cross-cutting types
 
@@ -88,11 +87,9 @@ lives in `shared` so the client previews splits and the server persists
   `rotation`; defaults to `rotation[0]`). `choreTurnSchema` carries `rotationIndex`
   (authoritative position; swap changes assignee, not index), `skippedAt`,
   `overdueNotifiedAt`. `swapTurnSchema = { assigneeId }`.
-- **meeting:** no configurable lead time — `REMINDER_LEAD_MINUTES = 60` constant
-  (invite at creation + reminder 1h before). `superRefine`: poll needs ≥2 options,
-  fixed/recurring need `startsAt`, recurring needs `recurEveryDays`.
-  `resolvePollSchema = { optionId }`, `voteSchema = { optionId }` (approval voting),
-  `rsvpSchema = { value }`.
+- **meeting:** fixed events only — `title` + `startsAt`, no mode, no recurrence,
+  no polling, no RSVP. No configurable lead time — `REMINDER_LEAD_MINUTES = 60`
+  constant (invite at creation + reminder 1h before).
 - **fixedCost:** no `splitAmong` — always equal among active members.
   `fixedCostViewSchema` adds the read-time computed `perPersonShare` (cents).
 - **settlement:** `updateSettlementSchema` (editable; hard delete also allowed;

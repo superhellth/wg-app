@@ -24,7 +24,7 @@
 - **Invite link:** expires after **24h**, **reusable** within that window (one link, the whole WG joins). A leaked link = outsider access, hence the short expiry.
 - **Add:** anyone can invite, and anyone can add member names to the roster (flat model).
 - **Remove:** **soft-remove / archive**.
-  - Removed member is hidden from active lists (chores rotation, shopping, RSVP, etc.).
+  - Removed member is hidden from active lists (chores rotation, shopping, etc.).
   - They remain in financial history and the ledger; **open debts persist**.
   - Settlement with an archived member is still possible at any time.
   - No hard delete, no debt absorption.
@@ -105,16 +105,13 @@ A **standalone, informational** module. **Not connected** to the money/ledger sy
 
 ## 6. Meeting / event organization
 
-- **Event types:**
-  - **Fixed** event (creator sets date/time)
-  - **Recurring** event (e.g. weekly game night)
-  - **Poll mode** — propose several time options, members vote, pick the winner
-- **RSVP:** **yes / no** per member; attendee list visible.
+- **Event type:** **fixed** only — a title + a date/time, set by the creator.
+- **No RSVP, no participation tracking** — just date + name.
 - **Reminder:** **push notification** before the event.
 - **Extras:** none in v1 (no location, notes, or "who brings what").
 
 ### Notifications
-- **Push:** new meeting / new poll invite + event reminder.
+- **Push:** new meeting invite + event reminder.
 
 ---
 
@@ -124,7 +121,7 @@ A **standalone, informational** module. **Not connected** to the money/ledger sy
 | Domain | Push? |
 |--------|-------|
 | Chores (turn started, overdue) | ✅ |
-| Meetings/polls (invite, reminder) | ✅ |
+| Meetings (invite, reminder) | ✅ |
 | Money (expenses, settlements) | ❌ |
 | Shopping (item added) | ❌ |
 

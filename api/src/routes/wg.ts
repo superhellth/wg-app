@@ -99,9 +99,6 @@ export async function wgResetRoutes(app: FastifyInstance) {
     await db.transaction(async (tx) => {
       // children → parents (FK order)
       await tx.delete(schema.expenseShares);
-      await tx.delete(schema.meetingVotes);
-      await tx.delete(schema.meetingOptions);
-      await tx.delete(schema.meetingRsvps);
       await tx.delete(schema.choreTurns);
       await tx.delete(schema.expenses);
       await tx.delete(schema.settlements);
