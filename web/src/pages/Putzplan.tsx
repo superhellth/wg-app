@@ -5,10 +5,13 @@ import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
+import Chip from "@mui/material/Chip";
+import ButtonBase from "@mui/material/ButtonBase";
 import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import dayjs from "dayjs";
+import { useMemo, useState } from "react";
 import { formatDate } from "../lib/format.js";
 import { useNavigate } from "react-router-dom";
 import {
@@ -17,19 +20,40 @@ import {
   useChoreRemind,
   type ChoreWithTurn,
 } from "../api/chores.js";
+import { useAbsences } from "../api/absences.js";
 import { useMembersMap } from "../api/members.js";
 import { AddFab } from "../components/Fab.js";
 import { useConfirm } from "../components/ConfirmDialog.js";
 import { EmptyState } from "../components/EmptyState.js";
 import { MemberAvatar } from "../components/MemberAvatar.js";
+import { SwapTurnDialog } from "../components/SwapTurnDialog.js";
+
+/** Whole calendar days since dueAt, floored to at least 1. */
+function overdueDays(dueAt: string): number {
+  const days = dayjs().startOf("day").diff(dayjs(dueAt).startOf("day"), "day");
+  return Math.max(1, days);
+}
 
 export function Putzplan() {
   const navigate = useNavigate();
   const chores = useChores();
   const members = useMembersMap();
+  const absences = useAbsences();
   const done = useChoreDone();
   const remind = useChoreRemind();
   const confirm = useConfirm();
+  const [swapTarget, setSwapTarget] = useState<ChoreWithTurn | null>(null);
+
+  const awayMemberIds = useMemo(() => {
+    const now = dayjs();
+    const ids = new Set<string>();
+    for (const a of absences.data ?? []) {
+      if (!dayjs(a.from).isAfter(now) && !dayjs(a.until).isBefore(now)) {
+        ids.add(a.memberId);
+      }
+    }
+    return ids;
+  }, [absences.data]);
 
   const handleDone = async (c: ChoreWithTurn) => {
     const ok = await confirm({
@@ -56,7 +80,7 @@ export function Putzplan() {
         <Stack spacing={1.5}>
           {chores.data.map((c) => {
             const turn = c.currentTurn;
-            const overdue = turn && dayjs(turn.dueAt).isBefore(dayjs());
+            const overdue = turn && dayjs(turn.dueAt).isBefore(dayjs()) ? overdueDays(turn.dueAt) : 0;
             const doerId = turn ? turn.executorId ?? turn.assigneeId : null;
             const covering = turn && turn.executorId && turn.executorId !== turn.assigneeId;
             // Can't tick done before the turn's own week starts (dueAt − 1 week).
@@ -99,11 +123,27 @@ export function Putzplan() {
                 {turn && doerId ? (
                   <>
                     <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mt: 0.5 }}>
-                      <MemberAvatar memberId={doerId} size={44} />
+                      <ButtonBase
+                        onClick={() => setSwapTarget(c)}
+                        sx={{ borderRadius: "50%" }}
+                        aria-label="Vertretung ändern"
+                      >
+                        <MemberAvatar memberId={doerId} size={44} />
+                      </ButtonBase>
                       <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
-                          {members.get(doerId)?.displayName ?? "—"}
-                        </Typography>
+                        <Stack direction="row" alignItems="center" spacing={0.75}>
+                          <ButtonBase
+                            onClick={() => setSwapTarget(c)}
+                            sx={{ borderRadius: 1 }}
+                          >
+                            <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+                              {members.get(doerId)?.displayName ?? "—"}
+                            </Typography>
+                          </ButtonBase>
+                          {awayMemberIds.has(doerId) && (
+                            <Chip label="Abwesend" size="small" color="warning" sx={{ height: 20 }} />
+                          )}
+                        </Stack>
                         {covering && (
                           <Typography variant="caption" color="text.secondary">
                             vertritt {members.get(turn.assigneeId)?.displayName ?? "—"}
@@ -120,8 +160,9 @@ export function Putzplan() {
                               fontWeight: overdue ? 700 : 400,
                             }}
                           >
-                            {overdue ? "Überfällig · " : "Fällig "}
-                            {formatDate(turn.dueAt)}
+                            {overdue
+                              ? `${overdue} Tag${overdue === 1 ? "" : "e"} überfällig`
+                              : `Fällig ${formatDate(turn.dueAt)}`}
                           </Typography>
                         </Stack>
                       </Box>
@@ -165,6 +206,18 @@ export function Putzplan() {
       )}
 
       <AddFab label="Aufgabe hinzufügen" onClick={() => navigate("/putzplan/neu")} />
+
+      {swapTarget && swapTarget.currentTurn && (
+        <SwapTurnDialog
+          open
+          onClose={() => setSwapTarget(null)}
+          choreId={swapTarget.id}
+          choreName={swapTarget.name}
+          currentExecutorId={
+            swapTarget.currentTurn.executorId ?? swapTarget.currentTurn.assigneeId
+          }
+        />
+      )}
     </Box>
   );
 }
