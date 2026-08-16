@@ -50,6 +50,13 @@
       "when": 1783074200000,
       "tag": "0006_worried_rotation",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786878690379,
+      "tag": "0007_white_the_twelve",
+      "breakpoints": true
     }
   ]
 }
