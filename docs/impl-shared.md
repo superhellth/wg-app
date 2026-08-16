@@ -79,8 +79,11 @@ lives in `shared` so the client previews splits and the server persists
 - **expense:** no `recurring` field (feature dropped). `createExpenseSchema` carries
   optional `shoppingItemIds` for the shopping→expense bridge (server marks them
   bought atomically — see `impl-api.md`).
-- **member:** `awayUntil` (nullable) drives chore auto-skip. `updateMemberSchema`
-  edits `displayName`/`awayUntil`. `memberQuerySchema` has `includeArchived`.
+- **member:** `updateMemberSchema` edits `displayName` only. `memberQuerySchema`
+  has `includeArchived`.
+- **absence:** `absenceSchema { id, memberId, from, until, createdAt }`;
+  `createAbsenceSchema { memberId, from, until }` (`.refine`s `from < until`).
+  Drives chore auto-skip — see `impl-api.md`.
 - **chore:** `createChoreSchema` has optional `firstAssigneeId` (must be in
   `rotation`; defaults to `rotation[0]`). `choreTurnSchema` carries `rotationIndex`
   (authoritative position; swap changes assignee, not index), `skippedAt`,

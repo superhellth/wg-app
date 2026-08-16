@@ -89,9 +89,11 @@ Sunday cadence intact.
 skipped turn row (`skippedAt` set) summarizing the covered span (names the
 skipped member(s)), then open the next real turn. Not one row per skipped week.
 
-## Away (`awayUntil`)
+## Away (`absences` table)
 
-Evaluated when a turn starts. If the nominal member is away:
+Evaluated when a turn starts. Away-status comes from the `absences` table
+(a row with `from <= now <= until`), not a `members` column. If the nominal
+member is away:
 
 - the **away member is skipped** — their turn row gets `skippedAt` set,
 - `executorId` is overridden to the **next present neighbor**, who does it,

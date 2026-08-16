@@ -114,8 +114,9 @@ No `fastify-type-provider-zod` — explicit and dependency-light.
   23:59:59.999**, week Mon–Sun, **Europe/Berlin** (hardcoded for the single German
   WG). `intervalDays`: weekly→7, biweekly→14, custom→`intervalDays`.
 - **Advance (done/skip):** next assignee = walk `(rotationIndex+1) % len`, skipping
-  members with `awayUntil > now`; if all away, take the next index anyway (no
-  infinite loop). One transaction + push to the new assignee.
+  members with an `absences` row where `from <= now <= until`; if all away, take
+  the next index anyway (no infinite loop). One transaction + push to the new
+  assignee.
 - **Swap:** `PATCH` current turn's `assigneeId` (rotation position unchanged),
   log `chore.swapped`.
 - **Skip:** set `skippedAt`, advance (member away), log `chore.skipped`.
@@ -142,7 +143,7 @@ No `fastify-type-provider-zod` — explicit and dependency-light.
 
 ## Members
 
-- `POST /api/members` (add), `PATCH /api/members/:id` (edit `displayName`/`awayUntil`),
+- `POST /api/members` (add), `PATCH /api/members/:id` (edit `displayName`),
   `PATCH /api/members/:id/archive` (set `archivedAt`), `PATCH /api/members/:id/restore`
   (clear it — mis-archive undo).
 - `GET /api/members` → active only; `?includeArchived=true` for ledger/feed views
@@ -150,6 +151,13 @@ No `fastify-type-provider-zod` — explicit and dependency-light.
 - **Soft-remove only** (`archivedAt`) — debts persist, settlement still possible.
 - **Archiving auto-skips** the member's open chore turns (advance the rotation) so
   chores don't stall. All mutations log activity.
+
+## Absences
+
+- `GET /api/absences?memberId=` (optional filter, sorted by `from`), `POST /api/absences`
+  (plan an away span), `DELETE /api/absences/:id` (cancel — delete + recreate is the
+  only "edit" path). Drives chore rotation auto-skip (see Chores above); log
+  `absence.created` / `absence.deleted` with a full-row snapshot.
 
 ## Shopping
 

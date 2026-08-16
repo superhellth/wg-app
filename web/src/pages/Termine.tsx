@@ -190,7 +190,12 @@ function PlanAbsenceDialog({ open, onClose }: { open: boolean; onClose: () => vo
   const [from, setFrom] = useState<Dayjs | null>(dayjs().tz(WG_TZ));
   const [until, setUntil] = useState<Dayjs | null>(dayjs().tz(WG_TZ).add(7, "day"));
 
-  const valid = selectedMember && from && until && from.isBefore(until) && !create.isPending;
+  const valid =
+    selectedMember &&
+    from &&
+    until &&
+    !until.startOf("day").isBefore(from.startOf("day")) &&
+    !create.isPending;
 
   const submit = () => {
     if (!valid || !from || !until) return;

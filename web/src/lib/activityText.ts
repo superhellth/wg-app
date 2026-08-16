@@ -22,6 +22,10 @@ export function activityText(a: Activity): string {
       return `hat ${d?.after?.displayName ?? "ein Mitglied"} entfernt`;
     case "member.restored":
       return `hat ${d?.after?.displayName ?? "ein Mitglied"} zurückgeholt`;
+    case "absence.created":
+      return "hat eine Abwesenheit eingetragen";
+    case "absence.deleted":
+      return "hat eine Abwesenheit gelöscht";
     case "expense.created":
       return `hat „${d?.snapshot?.description ?? "Ausgabe"}" erfasst · ${money(d?.snapshot?.amount)}`;
     case "expense.updated":
