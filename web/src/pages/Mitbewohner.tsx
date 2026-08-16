@@ -30,6 +30,7 @@ import {
   useUpdateMember,
 } from "../api/members.js";
 import { useCreateInvite } from "../api/invites.js";
+import { useAbsences } from "../api/absences.js";
 import { AddFab } from "../components/Fab.js";
 import { MemberAvatar } from "../components/MemberAvatar.js";
 
@@ -51,7 +52,14 @@ export function Mitbewohner() {
       onSuccess: (inv) => setInviteUrl(`${window.location.origin}/join/${inv.token}`),
     });
 
-  const isAway = (m: Member) => m.awayUntil && dayjs(m.awayUntil).isAfter(dayjs());
+  const absences = useAbsences();
+  const now = dayjs();
+  const awayMemberIds = new Set(
+    (absences.data ?? [])
+      .filter((a) => dayjs(a.from).isBefore(now) && dayjs(a.until).isAfter(now))
+      .map((a) => a.memberId),
+  );
+  const isAway = (m: Member) => awayMemberIds.has(m.id);
 
   return (
     <Box sx={{ p: 2 }}>
