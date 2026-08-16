@@ -7,6 +7,7 @@ interface Props {
   size?: number;
   /** override the displayed name (else looked up from roster) */
   name?: string;
+  className?: string;
 }
 
 function initials(name: string): string {
@@ -17,7 +18,7 @@ function initials(name: string): string {
 }
 
 /** Circular avatar tinted with the member's signature color + their initials. */
-export function MemberAvatar({ memberId, size = 36, name }: Props) {
+export function MemberAvatar({ memberId, size = 36, name, className }: Props) {
   const colors = useColorMap();
   const members = useMembersMap();
   const color = (memberId && colors.get(memberId)) || {
@@ -29,6 +30,7 @@ export function MemberAvatar({ memberId, size = 36, name }: Props) {
 
   return (
     <Avatar
+      className={className}
       sx={{
         width: size,
         height: size,
