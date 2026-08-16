@@ -91,8 +91,8 @@ export function AppShell() {
               />
             </MenuItem>
             <Divider />
-            <MenuItem onClick={() => go("/fixkosten")}>Fixkosten</MenuItem>
             <MenuItem onClick={() => go("/mitbewohner")}>Mitbewohner</MenuItem>
+            <MenuItem onClick={() => go("/fixkosten")}>Fixkosten</MenuItem>
           </Menu>
         </Toolbar>
       </AppBar>
