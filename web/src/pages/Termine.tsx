@@ -1,9 +1,13 @@
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
+import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
 import HowToVoteRoundedIcon from "@mui/icons-material/HowToVoteRounded";
 import EventRoundedIcon from "@mui/icons-material/EventRounded";
 import FlightTakeoffRoundedIcon from "@mui/icons-material/FlightTakeoffRounded";
 import RepeatRoundedIcon from "@mui/icons-material/RepeatRounded";
+import Accordion from "@mui/material/Accordion";
+import AccordionDetails from "@mui/material/AccordionDetails";
+import AccordionSummary from "@mui/material/AccordionSummary";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
@@ -19,8 +23,6 @@ import MenuItem from "@mui/material/MenuItem";
 import SpeedDial from "@mui/material/SpeedDial";
 import SpeedDialAction from "@mui/material/SpeedDialAction";
 import Stack from "@mui/material/Stack";
-import Tab from "@mui/material/Tab";
-import Tabs from "@mui/material/Tabs";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -36,7 +38,6 @@ import { useIdentity } from "../api/identity.js";
 import { useMeetings } from "../api/meetings.js";
 import { useMembers } from "../api/members.js";
 import { AbsenceCalendar } from "../components/AbsenceCalendar.js";
-import { AddFab } from "../components/Fab.js";
 import { EmptyState } from "../components/EmptyState.js";
 import { ParticipationChips } from "../components/ParticipationChips.js";
 import { formatDate, formatDateTime } from "../lib/format.js";
@@ -55,94 +56,40 @@ const MODE = {
 
 export function Termine() {
   const navigate = useNavigate();
-  const meetings = useMeetings();
-  const [view, setView] = useState<"list" | "calendar">("calendar");
   const [planOpen, setPlanOpen] = useState(false);
   const [dialOpen, setDialOpen] = useState(false);
 
-  const sorted = [...(meetings.data ?? [])].sort((a, b) => {
-    const ta = a.startsAt ? dayjs(a.startsAt).valueOf() : Infinity;
-    const tb = b.startsAt ? dayjs(b.startsAt).valueOf() : Infinity;
-    return ta - tb;
-  });
-
   return (
     <Box sx={{ p: 2 }}>
-      <Tabs
-        value={view}
-        onChange={(_e, v) => setView(v)}
-        variant="fullWidth"
-        sx={{ mb: 2 }}
+      <CalendarView />
+
+      <SpeedDial
+        ariaLabel="Neu"
+        icon={<AddRoundedIcon />}
+        open={dialOpen}
+        onOpen={() => setDialOpen(true)}
+        onClose={() => setDialOpen(false)}
+        sx={{ position: "fixed", bottom: 80, right: 16, zIndex: 1200 }}
       >
-        <Tab value="calendar" label="Kalender" />
-        <Tab value="list" label="Liste" />
-      </Tabs>
-
-      {view === "list" ? (
-        sorted.length > 0 ? (
-          <Stack spacing={1.5}>
-            {sorted.map((m) => {
-              const mode = MODE[m.mode];
-              return (
-                <Card key={m.id}>
-                  <CardActionArea sx={{ p: 2 }} onClick={() => navigate(`/termine/${m.id}`)}>
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                      <Typography variant="h6" sx={{ flex: 1 }}>{m.title}</Typography>
-                      <Chip icon={mode.icon} label={mode.label} size="small" variant="outlined" />
-                    </Stack>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                      {m.startsAt ? formatDateTime(m.startsAt) : "Noch kein Termin — abstimmen"}
-                    </Typography>
-                    {m.startsAt && (
-                      <>
-                        <Divider sx={{ my: 1.5 }} />
-                        <ParticipationChips rsvps={m.rsvps} />
-                      </>
-                    )}
-                  </CardActionArea>
-                </Card>
-              );
-            })}
-          </Stack>
-        ) : (
-          <EmptyState title="Keine Termine" hint="Plane ein Treffen oder starte eine Umfrage." />
-        )
-      ) : (
-        <CalendarView />
-      )}
-
-      {view === "list" && (
-        <AddFab label="Termin hinzufügen" onClick={() => navigate("/termine/neu")} />
-      )}
-      {view === "calendar" && (
-        <SpeedDial
-          ariaLabel="Neu"
-          icon={<AddRoundedIcon />}
-          open={dialOpen}
-          onOpen={() => setDialOpen(true)}
-          onClose={() => setDialOpen(false)}
-          sx={{ position: "fixed", bottom: 80, right: 16, zIndex: 1200 }}
-        >
-          <SpeedDialAction
-            icon={<EventRoundedIcon />}
-            tooltipTitle="Termin"
-            tooltipOpen
-            onClick={() => {
-              setDialOpen(false);
-              navigate("/termine/neu");
-            }}
-          />
-          <SpeedDialAction
-            icon={<FlightTakeoffRoundedIcon />}
-            tooltipTitle="Abwesenheit"
-            tooltipOpen
-            onClick={() => {
-              setDialOpen(false);
-              setPlanOpen(true);
-            }}
-          />
-        </SpeedDial>
-      )}
+        <SpeedDialAction
+          icon={<EventRoundedIcon />}
+          tooltipTitle="Termin"
+          tooltipOpen
+          onClick={() => {
+            setDialOpen(false);
+            navigate("/termine/neu");
+          }}
+        />
+        <SpeedDialAction
+          icon={<FlightTakeoffRoundedIcon />}
+          tooltipTitle="Abwesenheit"
+          tooltipOpen
+          onClick={() => {
+            setDialOpen(false);
+            setPlanOpen(true);
+          }}
+        />
+      </SpeedDial>
 
       <PlanAbsenceDialog open={planOpen} onClose={() => setPlanOpen(false)} />
     </Box>
@@ -163,6 +110,12 @@ function CalendarView() {
   const mine = [...(absences.data ?? [])]
     .filter((a) => dayjs(a.until).isAfter(now))
     .sort((a, b) => dayjs(a.from).valueOf() - dayjs(b.from).valueOf());
+
+  const sortedMeetings = [...(meetings.data ?? [])].sort((a, b) => {
+    const ta = a.startsAt ? dayjs(a.startsAt).valueOf() : Infinity;
+    const tb = b.startsAt ? dayjs(b.startsAt).valueOf() : Infinity;
+    return ta - tb;
+  });
 
   const selectedDay = selected?.tz(WG_TZ).startOf("day");
   const dayMeetings = selectedDay
@@ -241,37 +194,77 @@ function CalendarView() {
         </>
       )}
 
-      <Typography variant="overline" sx={{ color: "text.secondary", display: "block", mt: 3, mb: 1 }}>
-        Meine Abwesenheiten
-      </Typography>
-      {mine.length > 0 ? (
-        <Card sx={{ px: 1 }}>
-          {mine.map((a, i) => (
-            <Stack
-              key={a.id}
-              direction="row"
-              alignItems="center"
-              spacing={1.5}
-              sx={{
-                py: 1,
-                borderTop: i === 0 ? "none" : "1px solid",
-                borderColor: "divider",
-              }}
-            >
-              <Typography sx={{ flex: 1 }}>
-                {formatDate(a.from)} – {formatDate(a.until)}
-              </Typography>
-              <IconButton size="small" onClick={() => remove.mutate(a.id)}>
-                <DeleteRoundedIcon fontSize="small" />
-              </IconButton>
+      <Accordion defaultExpanded disableGutters sx={{ mt: 3 }}>
+        <AccordionSummary expandIcon={<ExpandMoreRoundedIcon />}>
+          <Typography sx={{ fontWeight: 600 }}>Termine</Typography>
+        </AccordionSummary>
+        <AccordionDetails sx={{ px: 0 }}>
+          {sortedMeetings.length > 0 ? (
+            <Stack spacing={1.5}>
+              {sortedMeetings.map((m) => {
+                const mode = MODE[m.mode];
+                return (
+                  <Card key={m.id}>
+                    <CardActionArea sx={{ p: 2 }} onClick={() => navigate(`/termine/${m.id}`)}>
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <Typography variant="h6" sx={{ flex: 1 }}>{m.title}</Typography>
+                        <Chip icon={mode.icon} label={mode.label} size="small" variant="outlined" />
+                      </Stack>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                        {m.startsAt ? formatDateTime(m.startsAt) : "Noch kein Termin — abstimmen"}
+                      </Typography>
+                      {m.startsAt && (
+                        <>
+                          <Divider sx={{ my: 1.5 }} />
+                          <ParticipationChips rsvps={m.rsvps} />
+                        </>
+                      )}
+                    </CardActionArea>
+                  </Card>
+                );
+              })}
             </Stack>
-          ))}
-        </Card>
-      ) : (
-        <Typography variant="body2" color="text.secondary">
-          Keine geplanten Abwesenheiten.
-        </Typography>
-      )}
+          ) : (
+            <EmptyState title="Keine Termine" hint="Plane ein Treffen oder starte eine Umfrage." />
+          )}
+        </AccordionDetails>
+      </Accordion>
+
+      <Accordion defaultExpanded disableGutters>
+        <AccordionSummary expandIcon={<ExpandMoreRoundedIcon />}>
+          <Typography sx={{ fontWeight: 600 }}>Abwesenheiten</Typography>
+        </AccordionSummary>
+        <AccordionDetails sx={{ px: 0 }}>
+          {mine.length > 0 ? (
+            <Card sx={{ px: 1 }}>
+              {mine.map((a, i) => (
+                <Stack
+                  key={a.id}
+                  direction="row"
+                  alignItems="center"
+                  spacing={1.5}
+                  sx={{
+                    py: 1,
+                    borderTop: i === 0 ? "none" : "1px solid",
+                    borderColor: "divider",
+                  }}
+                >
+                  <Typography sx={{ flex: 1 }}>
+                    {formatDate(a.from)} – {formatDate(a.until)}
+                  </Typography>
+                  <IconButton size="small" onClick={() => remove.mutate(a.id)}>
+                    <DeleteRoundedIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
+              ))}
+            </Card>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              Keine geplanten Abwesenheiten.
+            </Typography>
+          )}
+        </AccordionDetails>
+      </Accordion>
     </Box>
   );
 }
