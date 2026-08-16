@@ -1,3 +1,4 @@
+import type { BillingCycle } from "@wg/shared";
 import dayjs from "dayjs";
 import isoWeek from "dayjs/plugin/isoWeek.js";
 import timezone from "dayjs/plugin/timezone.js";
@@ -57,4 +58,14 @@ export function nextChoreDue(prevDue: Date, steps: number): Date {
  */
 export function choreDoneOpensAt(dueAt: Date): Date {
   return dayjs(dueAt).tz(TZ).subtract(1, "week").toDate();
+}
+
+/**
+ * Advance a fixed-cost due date by one billing cycle, in Berlin local time
+ * (so DST shifts don't nudge the time-of-day). `quarterly` = 3 months.
+ */
+export function nextCycleDate(from: Date, cycle: BillingCycle): Date {
+  const amount = cycle === "quarterly" ? 3 : 1;
+  const unit = cycle === "yearly" ? "year" : "month";
+  return dayjs(from).tz(TZ).add(amount, unit).toDate();
 }
