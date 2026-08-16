@@ -13,6 +13,8 @@ export const ACTIVITY_KINDS = [
   "member.updated",
   "member.archived",
   "member.restored",
+  "absence.created",
+  "absence.deleted",
   "expense.created",
   "expense.updated",
   "expense.deleted",

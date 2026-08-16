@@ -16,3 +16,4 @@ export * from "./chore.js";
 export * from "./meeting.js";
 export * from "./fixedCost.js";
 export * from "./display.js";
+export * from "./absence.js";
