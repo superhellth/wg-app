@@ -1,6 +1,7 @@
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import PersonAddRoundedIcon from "@mui/icons-material/PersonAddRounded";
+import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
@@ -20,8 +21,10 @@ import Switch from "@mui/material/Switch";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import type { Member } from "@wg/shared";
+import { useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   useAddMember,
   useArchiveMember,
@@ -31,8 +34,12 @@ import {
 } from "../api/members.js";
 import { useCreateInvite } from "../api/invites.js";
 import { useAbsences } from "../api/absences.js";
+import { ApiError } from "../api/client.js";
+import { clearIdentity } from "../api/identity.js";
+import { wgApi } from "../api/wg.js";
 import { AddFab } from "../components/Fab.js";
 import { MemberAvatar } from "../components/MemberAvatar.js";
+import { SectionLabel } from "../components/SectionLabel.js";
 
 export function Mitbewohner() {
   const [showArchived, setShowArchived] = useState(false);
@@ -61,19 +68,10 @@ export function Mitbewohner() {
   );
   const isAway = (m: Member) => awayMemberIds.has(m.id);
 
+  const [resetOpen, setResetOpen] = useState(false);
+
   return (
     <Box sx={{ p: 2 }}>
-      <Button
-        variant="contained"
-        startIcon={<PersonAddRoundedIcon />}
-        fullWidth
-        sx={{ mb: 2 }}
-        onClick={createInvite}
-        disabled={invite.isPending}
-      >
-        Einladungslink erstellen
-      </Button>
-
       <FormControlLabel
         control={<Switch checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />}
         label="Ehemalige anzeigen"
@@ -104,6 +102,30 @@ export function Mitbewohner() {
           </Stack>
         ))}
       </Card>
+
+      <Button
+        variant="contained"
+        startIcon={<PersonAddRoundedIcon />}
+        fullWidth
+        sx={{ mt: 2 }}
+        onClick={createInvite}
+        disabled={invite.isPending}
+      >
+        Einladungslink erstellen
+      </Button>
+
+      <Box sx={{ mt: 3 }}>
+        <SectionLabel>Gefahrenzone</SectionLabel>
+        <Card sx={{ p: 2 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            Setzt die gesamte WG zurück. Alle Daten werden unwiderruflich
+            gelöscht und die App startet neu.
+          </Typography>
+          <Button color="error" variant="outlined" onClick={() => setResetOpen(true)}>
+            WG zurücksetzen
+          </Button>
+        </Card>
+      </Box>
 
       {/* row menu */}
       <Menu anchorEl={menu?.el} open={Boolean(menu)} onClose={() => setMenu(null)}>
@@ -151,6 +173,7 @@ export function Mitbewohner() {
       )}
 
       <InviteDialog url={inviteUrl} onClose={() => setInviteUrl(null)} />
+      <ResetDialog open={resetOpen} onClose={() => setResetOpen(false)} />
     </Box>
   );
 }
@@ -233,6 +256,69 @@ function InviteDialog({ url, onClose }: { url: string | null; onClose: () => voi
       <DialogActions>
         <Button onClick={onClose}>Schließen</Button>
         <Button variant="contained" onClick={share}>Teilen</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+function ResetDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await wgApi.reset(password);
+      clearIdentity();
+      qc.clear();
+      navigate("/willkommen", { replace: true });
+    } catch (e) {
+      setError(
+        e instanceof ApiError && e.code === "forbidden"
+          ? "Falsches Passwort."
+          : "Zurücksetzen fehlgeschlagen.",
+      );
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={busy ? undefined : onClose} fullWidth maxWidth="xs">
+      <DialogTitle>WG zurücksetzen</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ mt: 0.5 }}>
+          <Alert severity="warning">
+            Das löscht ALLE Daten der WG (Mitglieder, Ausgaben, Aufgaben, Termine,
+            Einkaufsliste, Verlauf) unwiderruflich. Zum Bestätigen das Passwort
+            eingeben.
+          </Alert>
+          <TextField
+            type="password"
+            label="Passwort"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoFocus
+            fullWidth
+          />
+          {error && <Alert severity="error">{error}</Alert>}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} disabled={busy}>
+          Abbrechen
+        </Button>
+        <Button
+          color="error"
+          variant="contained"
+          disabled={!password || busy}
+          onClick={submit}
+        >
+          {busy ? "Wird gelöscht…" : "Alles löschen"}
+        </Button>
       </DialogActions>
     </Dialog>
   );

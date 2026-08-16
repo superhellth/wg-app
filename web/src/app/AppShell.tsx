@@ -37,7 +37,6 @@ const TITLES: Record<string, string> = {
   "/termine": "Kalender",
   "/fixkosten": "Fixkosten",
   "/mitbewohner": "Mitbewohner",
-  "/profil": "Profil",
   "/aktivitaet": "Aktivität",
 };
 
@@ -94,7 +93,6 @@ export function AppShell() {
             <Divider />
             <MenuItem onClick={() => go("/fixkosten")}>Fixkosten</MenuItem>
             <MenuItem onClick={() => go("/mitbewohner")}>Mitbewohner</MenuItem>
-            <MenuItem onClick={() => go("/profil")}>Profil & Einstellungen</MenuItem>
           </Menu>
         </Toolbar>
       </AppBar>

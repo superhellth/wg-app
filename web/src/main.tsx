@@ -19,7 +19,6 @@ import { Fixkosten } from "./pages/Fixkosten.js";
 import { Geld } from "./pages/Geld.js";
 import { MeetingForm } from "./pages/MeetingForm.js";
 import { Mitbewohner } from "./pages/Mitbewohner.js";
-import { Profil } from "./pages/Profil.js";
 import { Putzplan } from "./pages/Putzplan.js";
 import { RotationSettings } from "./pages/RotationSettings.js";
 import { Start } from "./pages/Start.js";
@@ -66,7 +65,6 @@ const router = createBrowserRouter([
           { path: "/termine/:id/bearbeiten", element: <MeetingForm /> },
           { path: "/fixkosten", element: <Fixkosten /> },
           { path: "/mitbewohner", element: <Mitbewohner /> },
-          { path: "/profil", element: <Profil /> },
           { path: "/aktivitaet", element: <Aktivitaet /> },
         ],
       },
