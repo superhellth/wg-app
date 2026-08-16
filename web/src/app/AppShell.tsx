@@ -80,25 +80,21 @@ export function AppShell() {
             anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
             transformOrigin={{ vertical: "top", horizontal: "right" }}
           >
-            <MenuItem disabled sx={{ opacity: "1 !important" }}>
-              <ListItemText
-                primary={me?.displayName ?? "Unbekannt"}
-                secondary="Angemeldet als"
-              />
-            </MenuItem>
-            <Divider />
-            <MenuItem onClick={() => go("/fixkosten")}>Fixkosten</MenuItem>
-            <MenuItem onClick={() => go("/mitbewohner")}>Mitbewohner</MenuItem>
-            <MenuItem onClick={() => go("/profil")}>Profil & Einstellungen</MenuItem>
-            <Divider />
             <MenuItem
               onClick={() => {
                 setMemberId(null);
                 setAnchor(null);
               }}
             >
-              Identität wechseln
+              <ListItemText
+                primary={me?.displayName ?? "Unbekannt"}
+                secondary="Angemeldet als · wechseln"
+              />
             </MenuItem>
+            <Divider />
+            <MenuItem onClick={() => go("/fixkosten")}>Fixkosten</MenuItem>
+            <MenuItem onClick={() => go("/mitbewohner")}>Mitbewohner</MenuItem>
+            <MenuItem onClick={() => go("/profil")}>Profil & Einstellungen</MenuItem>
           </Menu>
         </Toolbar>
       </AppBar>
