@@ -4,7 +4,7 @@ import {
   memberQuerySchema,
   updateMemberSchema,
 } from "@wg/shared";
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db/client.js";
 import { logActivity } from "../lib/activity.js";
@@ -24,18 +24,13 @@ export async function membersRoutes(app: FastifyInstance) {
   });
 
   // Add a member to the roster.
-  // Bootstrap: the very first member (empty roster) has no acting member yet —
-  // allow it without X-Member-Id and self-attribute the activity. Any later add
-  // requires a valid acting member.
+  // No X-Member-Id is required: this is how a newly invited roommate creates
+  // their own profile before they have a member id to send. Self-attribute the
+  // activity when there's no acting member yet.
   app.post("/", async (req, reply) => {
     const body = parse(createMemberSchema, req.body);
+    const actor = req.member && !req.member.archivedAt ? req.member : null;
     const member = await db.transaction(async (tx) => {
-      const [row] = await tx
-        .select({ count: sql<number>`count(*)::int` })
-        .from(schema.members);
-      const isBootstrap = (row?.count ?? 0) === 0;
-      const actor = isBootstrap ? null : requireMember(req);
-
       const [m] = await tx
         .insert(schema.members)
         .values({ displayName: body.displayName })

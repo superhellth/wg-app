@@ -8,6 +8,7 @@ import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
 import { useAbsences } from "../api/absences.js";
 import { useMeetings } from "../api/meetings.js";
+import { useMembers } from "../api/members.js";
 import { useColorMap } from "../theme/useMemberColor.js";
 
 dayjs.extend(utc);
@@ -18,19 +19,19 @@ const WG_TZ = "Europe/Berlin";
 
 function DayCell(
   props: PickersDayProps<Dayjs> & {
-    meetingDays: Set<string>;
+    meetingsByDay: Map<string, string[]>;
     absenceBarsByDay: Map<string, string[]>;
     colors: Map<string, { main: string; soft: string; ink: string }>;
   },
 ) {
-  const { meetingDays, absenceBarsByDay, colors, day, ...other } = props;
+  const { meetingsByDay, absenceBarsByDay, colors, day, outsideCurrentMonth, ...other } = props;
   const key = day.tz(WG_TZ).format("YYYY-MM-DD");
-  const bars = absenceBarsByDay.get(key) ?? [];
-  const hasMeeting = meetingDays.has(key);
+  const bars = outsideCurrentMonth ? [] : (absenceBarsByDay.get(key) ?? []);
+  const meetingDots = outsideCurrentMonth ? [] : (meetingsByDay.get(key) ?? []);
 
   return (
     <Box sx={{ position: "relative" }}>
-      <PickersDay {...other} day={day} />
+      <PickersDay {...other} day={day} outsideCurrentMonth={outsideCurrentMonth} />
       <Box
         sx={{
           position: "absolute",
@@ -44,8 +45,15 @@ function DayCell(
           pointerEvents: "none",
         }}
       >
-        {hasMeeting && (
-          <Box sx={{ width: 4, height: 4, borderRadius: "50%", bgcolor: "primary.main" }} />
+        {meetingDots.length > 0 && (
+          <Box sx={{ display: "flex", gap: "1px" }}>
+            {meetingDots.slice(0, 4).map((id) => (
+              <Box
+                key={id}
+                sx={{ width: 4, height: 4, borderRadius: "50%", bgcolor: "primary.main" }}
+              />
+            ))}
+          </Box>
         )}
         {bars.length > 0 && (
           <Box sx={{ display: "flex", gap: "1px" }}>
@@ -76,16 +84,23 @@ export function AbsenceCalendar({
 }) {
   const absences = useAbsences();
   const meetings = useMeetings();
+  const members = useMembers();
   const colors = useColorMap();
 
-  const meetingDays = new Set(
-    (meetings.data ?? [])
-      .filter((m) => m.startsAt)
-      .map((m) => dayjs(m.startsAt!).tz(WG_TZ).format("YYYY-MM-DD")),
-  );
+  const activeMemberIds = new Set((members.data ?? []).map((m) => m.id));
+
+  const meetingsByDay = new Map<string, string[]>();
+  for (const m of meetings.data ?? []) {
+    if (!m.startsAt) continue;
+    const key = dayjs(m.startsAt).tz(WG_TZ).format("YYYY-MM-DD");
+    const existing = meetingsByDay.get(key) ?? [];
+    existing.push(m.id);
+    meetingsByDay.set(key, existing);
+  }
 
   const absenceBarsByDay = new Map<string, string[]>();
   for (const a of absences.data ?? []) {
+    if (!activeMemberIds.has(a.memberId)) continue;
     let d = dayjs(a.from).tz(WG_TZ).startOf("day");
     const end = dayjs(a.until).tz(WG_TZ).startOf("day");
     while (d.isSame(end) || d.isBefore(end)) {
@@ -105,7 +120,7 @@ export function AbsenceCalendar({
         onChange={(d) => d && onChange?.(d)}
         slots={{ day: DayCell as unknown as typeof PickersDay }}
         slotProps={{
-          day: { meetingDays, absenceBarsByDay, colors } as never,
+          day: { meetingsByDay, absenceBarsByDay, colors } as never,
         }}
       />
     </LocalizationProvider>

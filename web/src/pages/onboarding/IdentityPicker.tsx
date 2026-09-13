@@ -1,4 +1,5 @@
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
@@ -31,8 +32,12 @@ export function IdentityPicker() {
   const handleAdd = async () => {
     const name = newName.trim();
     if (!name) return;
-    const member = await addMember.mutateAsync({ displayName: name });
-    pick(member.id);
+    try {
+      const member = await addMember.mutateAsync({ displayName: name });
+      pick(member.id);
+    } catch {
+      // surfaced via addMember.isError below
+    }
   };
 
   return (
@@ -82,6 +87,11 @@ export function IdentityPicker() {
             autoFocus
             fullWidth
           />
+          {addMember.isError && (
+            <Alert severity="error">
+              Konnte nicht angelegt werden. Bitte erneut versuchen.
+            </Alert>
+          )}
           <Button
             type="submit"
             variant="contained"

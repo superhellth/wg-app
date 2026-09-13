@@ -76,9 +76,10 @@ function CalendarView() {
   const members = useMembers();
   const now = dayjs();
   const [selected, setSelected] = useState<Dayjs | null>(dayjs().tz(WG_TZ));
+  const activeMemberIds = new Set((members.data ?? []).map((m) => m.id));
 
   const upcomingAbsences = [...(allAbsences.data ?? [])]
-    .filter((a) => dayjs(a.until).isAfter(now))
+    .filter((a) => activeMemberIds.has(a.memberId) && dayjs(a.until).isAfter(now))
     .sort((a, b) => dayjs(a.from).valueOf() - dayjs(b.from).valueOf());
 
   const sortedMeetings = [...(meetings.data ?? [])].sort(
@@ -92,6 +93,7 @@ function CalendarView() {
   const dayAbsences = selectedDay
     ? (allAbsences.data ?? []).filter(
         (a) =>
+          activeMemberIds.has(a.memberId) &&
           !selectedDay.isBefore(dayjs(a.from).tz(WG_TZ).startOf("day")) &&
           !selectedDay.isAfter(dayjs(a.until).tz(WG_TZ).startOf("day")),
       )
@@ -116,6 +118,7 @@ function CalendarView() {
                 sx={{
                   py: 1,
                   px: 1,
+                  borderRadius: 0,
                   borderTop: i === 0 ? "none" : "1px solid",
                   borderColor: "divider",
                 }}
@@ -138,6 +141,7 @@ function CalendarView() {
                 sx={{
                   py: 1,
                   px: 1,
+                  borderRadius: 0,
                   borderTop: i === 0 && dayMeetings.length === 0 ? "none" : "1px solid",
                   borderColor: "divider",
                 }}
@@ -146,8 +150,7 @@ function CalendarView() {
                   <FlightTakeoffRoundedIcon fontSize="small" />
                   <Box sx={{ flex: 1 }}>
                     <Typography>
-                      {members.data?.find((m) => m.id === a.memberId)?.displayName ?? "Unbekannt"}{" "}
-                      abwesend
+                      {members.data?.find((m) => m.id === a.memberId)?.displayName} abwesend
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       {formatDate(a.from)} – {formatDate(a.until)}
@@ -236,8 +239,7 @@ function CalendarView() {
                     </Box>
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography noWrap sx={{ fontWeight: 600 }}>
-                        {members.data?.find((m) => m.id === a.memberId)?.displayName ??
-                          "Unbekannt"}
+                        {members.data?.find((m) => m.id === a.memberId)?.displayName}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         {formatDate(a.from)} – {formatDate(a.until)}
