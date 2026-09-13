@@ -118,6 +118,7 @@ function CalendarView() {
                 sx={{
                   py: 1,
                   px: 1,
+                  borderRadius: 0,
                   borderTop: i === 0 ? "none" : "1px solid",
                   borderColor: "divider",
                 }}
@@ -140,6 +141,7 @@ function CalendarView() {
                 sx={{
                   py: 1,
                   px: 1,
+                  borderRadius: 0,
                   borderTop: i === 0 && dayMeetings.length === 0 ? "none" : "1px solid",
                   borderColor: "divider",
                 }}
