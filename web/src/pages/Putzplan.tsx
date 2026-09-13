@@ -86,9 +86,7 @@ export function Putzplan() {
             const opensAtDisplay = turn ? dayjs(turn.dueAt).subtract(6, "day") : null;
             const dueText = overdue
               ? `${overdue} Tag${overdue === 1 ? "" : "e"} überfällig`
-              : turn
-                ? `Fällig ${formatDate(turn.dueAt)}`
-                : null;
+              : null;
             const captionParts = [
               doerId ? members.get(doerId)?.displayName ?? "—" : null,
               doerId && awayMemberIds.has(doerId) ? "abwesend" : null,
@@ -103,6 +101,7 @@ export function Putzplan() {
                   cursor: "pointer",
                   borderLeft: overdue ? "3px solid" : "3px solid transparent",
                   borderLeftColor: overdue ? "error.main" : "transparent",
+                  opacity: notYet ? 0.6 : 1,
                 }}
                 onClick={() => navigate(`/putzplan/${c.id}/bearbeiten`)}
               >
