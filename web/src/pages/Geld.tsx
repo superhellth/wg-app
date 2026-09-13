@@ -1,8 +1,9 @@
-import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
+import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import Divider from "@mui/material/Divider";
+import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { useState } from "react";
@@ -12,7 +13,6 @@ import { useExpenses } from "../api/expenses.js";
 import { useMembersMap } from "../api/members.js";
 import { AddFab } from "../components/Fab.js";
 import { MemberAvatar } from "../components/MemberAvatar.js";
-import { MemberChip } from "../components/MemberChip.js";
 import { MoneyText } from "../components/MoneyText.js";
 import { SectionLabel } from "../components/SectionLabel.js";
 import { SettlementDialog } from "../components/SettlementDialog.js";
@@ -73,17 +73,55 @@ export function Geld() {
                   direction="row"
                   alignItems="center"
                   spacing={1}
-                  sx={{ py: 1.25, borderTop: i === 0 ? "none" : "1px solid", borderColor: "divider" }}
+                  sx={{
+                    py: 1.25,
+                    borderTop: i === 0 ? "none" : "1px solid",
+                    borderColor: "divider",
+                  }}
                 >
-                  <MemberChip memberId={t.fromMemberId} />
-                  <ArrowForwardRoundedIcon fontSize="small" color="action" />
-                  <MemberChip memberId={t.toMemberId} />
-                  <Box sx={{ flex: 1, minWidth: 8 }} />
-                  <MoneyText cents={t.amount} size="0.95rem" />
-                  <Button
-                    variant="contained"
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    spacing={0.75}
+                    sx={{ minWidth: 0, maxWidth: "32%" }}
+                  >
+                    <MemberAvatar memberId={t.fromMemberId} size={28} />
+                    <Typography noWrap variant="body2" sx={{ fontWeight: 600 }}>
+                      {members.get(t.fromMemberId)?.displayName ?? "—"}
+                    </Typography>
+                  </Stack>
+                  <Box
+                    sx={{
+                      flex: 1,
+                      borderBottom: "2px dotted",
+                      borderColor: "divider",
+                      minWidth: 8,
+                    }}
+                  />
+                  <MoneyText cents={t.amount} size="0.9rem" />
+                  <Box
+                    sx={{
+                      flex: 1,
+                      borderBottom: "2px dotted",
+                      borderColor: "divider",
+                      minWidth: 8,
+                    }}
+                  />
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    spacing={0.75}
+                    sx={{ minWidth: 0, maxWidth: "32%" }}
+                  >
+                    <MemberAvatar memberId={t.toMemberId} size={28} />
+                    <Typography noWrap variant="body2" sx={{ fontWeight: 600 }}>
+                      {members.get(t.toMemberId)?.displayName ?? "—"}
+                    </Typography>
+                  </Stack>
+                  <IconButton
                     size="small"
-                    sx={{ flexShrink: 0 }}
+                    aria-label="Als bezahlt markieren"
+                    sx={{ flexShrink: 0, color: "primary.main" }}
                     onClick={() =>
                       setDialog({
                         open: true,
@@ -95,8 +133,8 @@ export function Geld() {
                       })
                     }
                   >
-                    Bezahlt
-                  </Button>
+                    <CheckRoundedIcon fontSize="small" />
+                  </IconButton>
                 </Stack>
               ))}
             </Card>
