@@ -1,3 +1,4 @@
+import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -79,45 +80,45 @@ export function Geld() {
                     borderColor: "divider",
                   }}
                 >
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    spacing={0.75}
-                    sx={{ minWidth: 0, maxWidth: "32%" }}
-                  >
-                    <MemberAvatar memberId={t.fromMemberId} size={28} />
-                    <Typography noWrap variant="body2" sx={{ fontWeight: 600 }}>
-                      {members.get(t.fromMemberId)?.displayName ?? "—"}
-                    </Typography>
-                  </Stack>
+                  <MemberAvatar memberId={t.fromMemberId} size={28} />
                   <Box
                     sx={{
                       flex: 1,
-                      borderBottom: "2px dotted",
-                      borderColor: "divider",
                       minWidth: 8,
+                      position: "relative",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
-                  />
-                  <MoneyText cents={t.amount} size="0.9rem" />
-                  <Box
-                    sx={{
-                      flex: 1,
-                      borderBottom: "2px dotted",
-                      borderColor: "divider",
-                      minWidth: 8,
-                    }}
-                  />
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    spacing={0.75}
-                    sx={{ minWidth: 0, maxWidth: "32%" }}
                   >
-                    <MemberAvatar memberId={t.toMemberId} size={28} />
-                    <Typography noWrap variant="body2" sx={{ fontWeight: 600 }}>
-                      {members.get(t.toMemberId)?.displayName ?? "—"}
-                    </Typography>
-                  </Stack>
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        left: 0,
+                        right: 0,
+                        top: "50%",
+                        height: "2px",
+                        backgroundImage:
+                          "repeating-linear-gradient(to right, currentColor 0, currentColor 3px, transparent 3px, transparent 7px)",
+                        color: "action.disabled",
+                      }}
+                    />
+                    <Box sx={{ bgcolor: "background.paper", px: 0.75, zIndex: 1 }}>
+                      <MoneyText cents={t.amount} size="0.85rem" />
+                    </Box>
+                    <ArrowForwardRoundedIcon
+                      fontSize="small"
+                      sx={{
+                        position: "absolute",
+                        right: -4,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        color: "action.disabled",
+                        bgcolor: "background.paper",
+                      }}
+                    />
+                  </Box>
+                  <MemberAvatar memberId={t.toMemberId} size={28} />
                   <IconButton
                     size="small"
                     aria-label="Als bezahlt markieren"
