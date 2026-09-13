@@ -29,9 +29,9 @@ export function Geld() {
     prefill?: { fromMemberId: string; toMemberId: string; amount: number };
   }>({ open: false });
 
-  const entries = Object.entries(balances.data?.balances ?? {}).sort(
-    (a, b) => b[1] - a[1],
-  );
+  const entries = Object.entries(balances.data?.balances ?? {})
+    .filter(([id, bal]) => bal !== 0 || !members.get(id)?.archivedAt)
+    .sort((a, b) => b[1] - a[1]);
   const transfers = balances.data?.suggestedTransfers ?? [];
 
   return (
