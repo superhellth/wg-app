@@ -66,19 +66,24 @@ export function Geld() {
         {transfers.length > 0 && (
           <Box>
             <SectionLabel>Ausgleichen</SectionLabel>
-            <Stack spacing={1}>
+            <Card sx={{ px: 2 }}>
               {transfers.map((t, i) => (
-                <Card key={i} sx={{ p: 1.5 }}>
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <MemberChip memberId={t.fromMemberId} />
-                    <ArrowForwardRoundedIcon fontSize="small" color="action" />
-                    <MemberChip memberId={t.toMemberId} />
-                    <Box sx={{ flex: 1 }} />
-                    <MoneyText cents={t.amount} size="0.95rem" />
-                  </Stack>
+                <Stack
+                  key={i}
+                  direction="row"
+                  alignItems="center"
+                  spacing={1}
+                  sx={{ py: 1.25, borderTop: i === 0 ? "none" : "1px solid", borderColor: "divider" }}
+                >
+                  <MemberChip memberId={t.fromMemberId} />
+                  <ArrowForwardRoundedIcon fontSize="small" color="action" />
+                  <MemberChip memberId={t.toMemberId} />
+                  <Box sx={{ flex: 1, minWidth: 8 }} />
+                  <MoneyText cents={t.amount} size="0.95rem" />
                   <Button
+                    variant="contained"
                     size="small"
-                    sx={{ mt: 1 }}
+                    sx={{ flexShrink: 0 }}
                     onClick={() =>
                       setDialog({
                         open: true,
@@ -90,11 +95,11 @@ export function Geld() {
                       })
                     }
                   >
-                    Als bezahlt markieren
+                    Bezahlt
                   </Button>
-                </Card>
+                </Stack>
               ))}
-            </Stack>
+            </Card>
           </Box>
         )}
 
