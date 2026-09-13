@@ -32,6 +32,8 @@ export function activityText(a: Activity, members: Map<string, Member>): string 
       return `hat ${d?.after?.displayName ?? "ein Mitglied"} zurückgeholt`;
     case "absence.created":
       return "hat eine Abwesenheit eingetragen";
+    case "absence.updated":
+      return "hat eine Abwesenheit bearbeitet";
     case "absence.deleted":
       return "hat eine Abwesenheit gelöscht";
     case "expense.created":

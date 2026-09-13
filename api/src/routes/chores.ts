@@ -40,12 +40,12 @@ async function loadWgConfig(tx: Tx): Promise<WgConfig> {
   return { rotation: row?.rotation ?? [], graceDays: row?.graceDays ?? 2 };
 }
 
-/** Member ids currently away (an absence row spans `now`). */
-async function awaySet(tx: Tx, now: Date): Promise<Set<string>> {
+/** Member ids away at `at` (an absence row spans that instant). */
+async function awaySet(tx: Tx, at: Date): Promise<Set<string>> {
   const rows = await tx
     .select({ memberId: schema.absences.memberId })
     .from(schema.absences)
-    .where(and(lte(schema.absences.from, now), gte(schema.absences.until, now)));
+    .where(and(lte(schema.absences.from, at), gte(schema.absences.until, at)));
   return new Set(rows.map((r) => r.memberId));
 }
 
@@ -115,7 +115,8 @@ async function openNextTurn(
   }
 
   const nextIndex = (current.rotationIndex + steps) % n;
-  const away = await awaySet(tx, now);
+  const nextDueAt = nextChoreDue(current.dueAt, steps);
+  const away = await awaySet(tx, nextDueAt);
   const [next] = await tx
     .insert(schema.choreTurns)
     .values({
@@ -123,7 +124,7 @@ async function openNextTurn(
       assigneeId: rotation[nextIndex]!,
       executorId: resolveExecutor(rotation, nextIndex, away),
       rotationIndex: nextIndex,
-      dueAt: nextChoreDue(current.dueAt, steps),
+      dueAt: nextDueAt,
     })
     .returning();
   return { next: next!, skipped };
@@ -162,7 +163,8 @@ export async function choresRoutes(app: FastifyInstance) {
         .values({ name: body.name })
         .returning();
 
-      const away = await awaySet(tx, now);
+      const turnDueAt = firstChoreDue(now);
+      const away = await awaySet(tx, turnDueAt);
       const [turn] = await tx
         .insert(schema.choreTurns)
         .values({
@@ -170,7 +172,7 @@ export async function choresRoutes(app: FastifyInstance) {
           assigneeId: firstAssignee,
           executorId: resolveExecutor(config.rotation, rotationIndex, away),
           rotationIndex,
-          dueAt: firstChoreDue(now),
+          dueAt: turnDueAt,
         })
         .returning();
       await logActivity(tx, {

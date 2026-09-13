@@ -233,13 +233,19 @@ export function ExpenseForm() {
                 avatar={<MemberAvatar memberId={m.id} size={24} />}
                 label={m.displayName}
                 variant={selected.has(m.id) ? "filled" : "outlined"}
-                color={selected.has(m.id) ? "primary" : "default"}
                 onClick={() => toggle(m.id)}
-                sx={{
+                sx={(theme) => ({
                   // double class beats MUI's internal .MuiChip-avatar rule on specificity
                   // (not just injection order), so this stays robust across renders
                   "& .MuiChip-avatar.MuiChip-avatar": { marginLeft: "10px" },
-                }}
+                  // color="primary" would make MUI override the avatar's
+                  // member-color background via .MuiChip-avatarColorPrimary,
+                  // so selection is styled manually here instead
+                  ...(selected.has(m.id) && {
+                    backgroundColor: theme.palette.primary.main,
+                    color: theme.palette.primary.contrastText,
+                  }),
+                })}
               />
             ))}
           </Stack>
