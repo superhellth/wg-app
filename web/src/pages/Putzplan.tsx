@@ -1,4 +1,4 @@
-import NotificationsActiveRoundedIcon from "@mui/icons-material/NotificationsActiveRounded";
+import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -14,7 +14,6 @@ import { useNavigate } from "react-router-dom";
 import {
   useChores,
   useChoreDone,
-  useChoreRemind,
   type ChoreWithTurn,
 } from "../api/chores.js";
 import { useAbsences } from "../api/absences.js";
@@ -37,7 +36,6 @@ export function Putzplan() {
   const members = useMembersMap();
   const absences = useAbsences();
   const done = useChoreDone();
-  const remind = useChoreRemind();
   const confirm = useConfirm();
   const [swapTarget, setSwapTarget] = useState<ChoreWithTurn | null>(null);
 
@@ -138,19 +136,6 @@ export function Putzplan() {
                   </Box>
                   {turn && doerId ? (
                     <>
-                      {overdue ? (
-                        <IconButton
-                          size="small"
-                          aria-label="Erinnern"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            remind.mutate(c.id);
-                          }}
-                          sx={{ color: "error.main", flexShrink: 0 }}
-                        >
-                          <NotificationsActiveRoundedIcon fontSize="small" />
-                        </IconButton>
-                      ) : null}
                       {notYet && opensAtDisplay ? (
                         <Typography
                           variant="caption"
@@ -160,17 +145,17 @@ export function Putzplan() {
                           ab {formatDate(opensAtDisplay.toISOString())}
                         </Typography>
                       ) : (
-                        <Button
-                          variant="contained"
+                        <IconButton
                           size="small"
-                          sx={{ flexShrink: 0 }}
+                          aria-label="Als erledigt markieren"
+                          sx={{ flexShrink: 0, color: "primary.main" }}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDone(c);
                           }}
                         >
-                          Erledigt
-                        </Button>
+                          <CheckRoundedIcon fontSize="small" />
+                        </IconButton>
                       )}
                     </>
                   ) : null}

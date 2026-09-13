@@ -21,8 +21,6 @@ export const choresApi = {
       method: "PATCH",
       body: JSON.stringify(body),
     }),
-  remind: (id: string) =>
-    http<void>(`/api/chores/${id}/remind`, { method: "POST" }),
   remove: (id: string) => http<void>(`/api/chores/${id}`, { method: "DELETE" }),
 };
 
@@ -51,5 +49,4 @@ export const useChoreSwap = () =>
   useChoreMutation(({ id, body }: { id: string; body: SwapTurn }) =>
     choresApi.swap(id, body),
   );
-export const useChoreRemind = () => useChoreMutation(choresApi.remind);
 export const useDeleteChore = () => useChoreMutation(choresApi.remove);

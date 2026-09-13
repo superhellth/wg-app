@@ -69,8 +69,6 @@ export function activityText(a: Activity, members: Map<string, Member>): string 
         ? `hat „${choreName}" für ${who} übersprungen`
         : `hat „${choreName}" übersprungen`;
     }
-    case "chore.reminded":
-      return "hat an eine Aufgabe erinnert";
     case "meeting.created":
       return `hat „${d?.snapshot?.title ?? "Termin"}" erstellt`;
     case "meeting.updated":

@@ -331,35 +331,4 @@ export async function choresRoutes(app: FastifyInstance) {
     });
     return after;
   });
-
-  // Manual reminder: nudge whoever's up on demand.
-  app.post("/:id/remind", async (req, reply) => {
-    const actor = requireMember(req);
-    const { id } = parse(idParamSchema, req.params);
-    const current = await db.transaction(async (tx) => {
-      const [chore] = await tx
-        .select()
-        .from(schema.chores)
-        .where(eq(schema.chores.id, id));
-      if (!chore) throw new NotFoundError("chore not found");
-      const [turn] = await tx
-        .select()
-        .from(schema.choreTurns)
-        .where(activeTurnWhere(id));
-      if (!turn) throw new NotFoundError("no active turn");
-      await logActivity(tx, {
-        memberId: actor.id,
-        kind: "chore.reminded",
-        data: { choreId: id, assigneeId: doerOf(turn) },
-      });
-      return { chore, turn };
-    });
-
-    void sendPushToMember(doerOf(current.turn), {
-      title: "Erinnerung",
-      body: `${current.chore.name} ist fällig`,
-      url: "/chores",
-    });
-    return reply.status(204).send();
-  });
 }
