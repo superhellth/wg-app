@@ -85,7 +85,7 @@ export function MeetingForm() {
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="de">
       <Box sx={{ p: 2, pb: 4 }}>
-        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2.5 }}>
           <IconButton edge="start" onClick={() => navigate(-1)}>
             <ArrowBackRoundedIcon />
           </IconButton>

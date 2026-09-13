@@ -43,7 +43,7 @@ export function ExpenseForm() {
   const editing = Boolean(id);
   const [params] = useSearchParams();
   const { memberId } = useIdentity();
-  const { data: members } = useMembers();
+  const { data: members } = useMembers(true);
   const create = useCreateExpense();
   const update = useUpdateExpense();
   const remove = useDeleteExpense();
@@ -63,7 +63,17 @@ export function ExpenseForm() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [values, setValues] = useState<Record<string, string>>({});
 
-  const active = members ?? [];
+  // Only active members are selectable for new participants/payer; archived
+  // members already part of this expense (old shares, or the payer) still
+  // need to be displayed, just not offered as new choices.
+  const active = (members ?? []).filter((m) => !m.archivedAt);
+  const archivedSelected = (members ?? []).filter(
+    (m) => m.archivedAt && selected.has(m.id),
+  );
+  const displayMembers = [...active, ...archivedSelected];
+  const archivedPayer = (members ?? []).find(
+    (m) => m.archivedAt && m.id === payerId,
+  );
 
   // Seed once: from the loaded expense when editing, else default to all
   // active members as participants + self as payer.
@@ -95,7 +105,7 @@ export function ExpenseForm() {
   }, [editing, detail.data, members]);
 
   const amount = parseEurToCents(amountStr) ?? 0;
-  const participants = active.filter((m) => selected.has(m.id));
+  const participants = displayMembers.filter((m) => selected.has(m.id));
 
   const shares = participants.map((m) => {
     const v = values[m.id] ?? "";
@@ -163,7 +173,7 @@ export function ExpenseForm() {
 
   return (
     <Box sx={{ p: 2, pb: 4 }}>
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2.5 }}>
         <IconButton edge="start" onClick={() => navigate(-1)}>
           <ArrowBackRoundedIcon />
         </IconButton>
@@ -207,6 +217,11 @@ export function ExpenseForm() {
               {m.displayName}
             </MenuItem>
           ))}
+          {archivedPayer && (
+            <MenuItem key={archivedPayer.id} value={archivedPayer.id}>
+              {archivedPayer.displayName}
+            </MenuItem>
+          )}
         </TextField>
 
         <Box>
@@ -227,7 +242,7 @@ export function ExpenseForm() {
         <Box>
           <SectionLabel>Bezahlt für</SectionLabel>
           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-            {active.map((m) => (
+            {displayMembers.map((m) => (
               <Chip
                 key={m.id}
                 avatar={<MemberAvatar memberId={m.id} size={24} />}
@@ -302,7 +317,7 @@ export function ExpenseForm() {
             <SectionLabel>Vorschau</SectionLabel>
             <Stack spacing={0.75}>
               {preview.map((r) => {
-                const m = active.find((x) => x.id === r.memberId);
+                const m = displayMembers.find((x) => x.id === r.memberId);
                 return (
                   <Stack key={r.memberId} direction="row" justifyContent="space-between">
                     <Typography variant="body2">{m?.displayName}</Typography>
