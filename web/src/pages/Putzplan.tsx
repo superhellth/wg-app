@@ -86,6 +86,9 @@ export function Putzplan() {
             // Can't tick done before the turn's own week starts (dueAt − 1 week).
             const opensAt = turn ? dayjs(turn.dueAt).subtract(1, "week") : null;
             const notYet = opensAt ? dayjs().isBefore(opensAt) : false;
+            // dueAt is Sunday 23:59:59.999, so opensAt lands 1ms before Monday —
+            // display the Monday date itself, not the Sunday-night instant.
+            const opensAtDisplay = turn ? dayjs(turn.dueAt).subtract(6, "day") : null;
             return (
               <Card
                 key={c.id}
@@ -174,9 +177,9 @@ export function Putzplan() {
                       justifyContent="flex-end"
                       sx={{ mt: 1.5 }}
                     >
-                      {notYet && opensAt && (
+                      {notYet && opensAtDisplay && (
                         <Typography variant="caption" color="text.secondary">
-                          Erledigen ab {formatDate(opensAt.toISOString())}
+                          Erledigen ab {formatDate(opensAtDisplay.toISOString())}
                         </Typography>
                       )}
                       <Button
