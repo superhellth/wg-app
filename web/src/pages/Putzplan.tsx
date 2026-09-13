@@ -113,59 +113,70 @@ export function Putzplan() {
                   borderLeftColor: overdue ? "error.main" : "transparent",
                 }}
               >
-                <Stack direction="row" alignItems="center" spacing={1.5}>
+                <Stack direction="row" alignItems="flex-start" spacing={1.5}>
                   {turn && doerId ? (
                     <ButtonBase
                       onClick={() => setSwapTarget(c)}
-                      sx={{ borderRadius: "50%" }}
+                      sx={{ borderRadius: "50%", mt: 0.25 }}
                       aria-label="Vertretung ändern"
                     >
                       <MemberAvatar memberId={doerId} size={40} />
                     </ButtonBase>
                   ) : null}
                   <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography noWrap sx={{ fontWeight: 600 }}>
-                      {c.name}
-                    </Typography>
-                    <Typography
-                      noWrap
-                      variant="caption"
-                      sx={{
-                        color: overdue ? "error.main" : "text.secondary",
-                        fontWeight: overdue ? 700 : 400,
-                      }}
-                    >
-                      {captionParts.length > 0 ? captionParts.join(" · ") : "Keine offene Runde"}
-                    </Typography>
-                  </Box>
-                  {turn && doerId ? (
-                    notYet && opensAtDisplay ? (
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ flexShrink: 0 }}
-                      >
-                        ab {formatDate(opensAtDisplay.toISOString())}
+                    <Stack direction="row" alignItems="flex-start" spacing={0.5}>
+                      <Typography noWrap sx={{ flex: 1, minWidth: 0, fontWeight: 600 }}>
+                        {c.name}
                       </Typography>
-                    ) : (
-                      <Button
-                        variant="contained"
+                      <IconButton
                         size="small"
-                        sx={{ flexShrink: 0 }}
-                        onClick={() => handleDone(c)}
+                        aria-label="Weitere Aktionen"
+                        onClick={(e) => setMenu({ el: e.currentTarget, chore: c })}
+                        sx={{ color: "text.disabled", mt: -0.75, mr: -0.75 }}
                       >
-                        Erledigt
-                      </Button>
-                    )
-                  ) : null}
-                  <IconButton
-                    size="small"
-                    aria-label="Weitere Aktionen"
-                    onClick={(e) => setMenu({ el: e.currentTarget, chore: c })}
-                    sx={{ color: "text.disabled" }}
-                  >
-                    <MoreVertRoundedIcon fontSize="small" />
-                  </IconButton>
+                        <MoreVertRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Stack>
+                    <Stack
+                      direction="row"
+                      alignItems="center"
+                      justifyContent="space-between"
+                      spacing={1}
+                      sx={{ mt: 0.25 }}
+                    >
+                      <Typography
+                        noWrap
+                        variant="caption"
+                        sx={{
+                          minWidth: 0,
+                          color: overdue ? "error.main" : "text.secondary",
+                          fontWeight: overdue ? 700 : 400,
+                        }}
+                      >
+                        {captionParts.length > 0 ? captionParts.join(" · ") : "Keine offene Runde"}
+                      </Typography>
+                      {turn && doerId ? (
+                        notYet && opensAtDisplay ? (
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ flexShrink: 0 }}
+                          >
+                            ab {formatDate(opensAtDisplay.toISOString())}
+                          </Typography>
+                        ) : (
+                          <Button
+                            variant="contained"
+                            size="small"
+                            sx={{ flexShrink: 0 }}
+                            onClick={() => handleDone(c)}
+                          >
+                            Erledigt
+                          </Button>
+                        )
+                      ) : null}
+                    </Stack>
+                  </Box>
                 </Stack>
               </Card>
             );
