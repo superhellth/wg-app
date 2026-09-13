@@ -1,5 +1,3 @@
-import EditRoundedIcon from "@mui/icons-material/EditRounded";
-import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
 import NotificationsActiveRoundedIcon from "@mui/icons-material/NotificationsActiveRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import Box from "@mui/material/Box";
@@ -7,10 +5,6 @@ import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import ButtonBase from "@mui/material/ButtonBase";
 import IconButton from "@mui/material/IconButton";
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
-import ListItemIcon from "@mui/material/ListItemIcon";
-import ListItemText from "@mui/material/ListItemText";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import dayjs from "dayjs";
@@ -46,7 +40,6 @@ export function Putzplan() {
   const remind = useChoreRemind();
   const confirm = useConfirm();
   const [swapTarget, setSwapTarget] = useState<ChoreWithTurn | null>(null);
-  const [menu, setMenu] = useState<{ el: HTMLElement; chore: ChoreWithTurn } | null>(null);
 
   const awayMemberIds = useMemo(() => {
     const now = dayjs();
@@ -109,74 +102,78 @@ export function Putzplan() {
                 key={c.id}
                 sx={{
                   p: 1.75,
+                  cursor: "pointer",
                   borderLeft: overdue ? "3px solid" : "3px solid transparent",
                   borderLeftColor: overdue ? "error.main" : "transparent",
                 }}
+                onClick={() => navigate(`/putzplan/${c.id}/bearbeiten`)}
               >
-                <Stack direction="row" alignItems="flex-start" spacing={1.5}>
+                <Stack direction="row" alignItems="center" spacing={1.5}>
                   {turn && doerId ? (
                     <ButtonBase
-                      onClick={() => setSwapTarget(c)}
-                      sx={{ borderRadius: "50%", mt: 0.25 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSwapTarget(c);
+                      }}
+                      sx={{ borderRadius: "50%" }}
                       aria-label="Vertretung ändern"
                     >
                       <MemberAvatar memberId={doerId} size={40} />
                     </ButtonBase>
                   ) : null}
                   <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Stack direction="row" alignItems="flex-start" spacing={0.5}>
-                      <Typography noWrap sx={{ flex: 1, minWidth: 0, fontWeight: 600 }}>
-                        {c.name}
-                      </Typography>
-                      <IconButton
-                        size="small"
-                        aria-label="Weitere Aktionen"
-                        onClick={(e) => setMenu({ el: e.currentTarget, chore: c })}
-                        sx={{ color: "text.disabled", mt: -0.75, mr: -0.75 }}
-                      >
-                        <MoreVertRoundedIcon fontSize="small" />
-                      </IconButton>
-                    </Stack>
-                    <Stack
-                      direction="row"
-                      alignItems="center"
-                      justifyContent="space-between"
-                      spacing={1}
-                      sx={{ mt: 0.25 }}
+                    <Typography noWrap sx={{ fontWeight: 600 }}>
+                      {c.name}
+                    </Typography>
+                    <Typography
+                      noWrap
+                      variant="caption"
+                      sx={{
+                        color: overdue ? "error.main" : "text.secondary",
+                        fontWeight: overdue ? 700 : 400,
+                      }}
                     >
-                      <Typography
-                        noWrap
-                        variant="caption"
-                        sx={{
-                          minWidth: 0,
-                          color: overdue ? "error.main" : "text.secondary",
-                          fontWeight: overdue ? 700 : 400,
-                        }}
-                      >
-                        {captionParts.length > 0 ? captionParts.join(" · ") : "Keine offene Runde"}
-                      </Typography>
-                      {turn && doerId ? (
-                        notYet && opensAtDisplay ? (
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{ flexShrink: 0 }}
-                          >
-                            ab {formatDate(opensAtDisplay.toISOString())}
-                          </Typography>
-                        ) : (
-                          <Button
-                            variant="contained"
-                            size="small"
-                            sx={{ flexShrink: 0 }}
-                            onClick={() => handleDone(c)}
-                          >
-                            Erledigt
-                          </Button>
-                        )
-                      ) : null}
-                    </Stack>
+                      {captionParts.length > 0 ? captionParts.join(" · ") : "Keine offene Runde"}
+                    </Typography>
                   </Box>
+                  {turn && doerId ? (
+                    <>
+                      {overdue ? (
+                        <IconButton
+                          size="small"
+                          aria-label="Erinnern"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            remind.mutate(c.id);
+                          }}
+                          sx={{ color: "error.main", flexShrink: 0 }}
+                        >
+                          <NotificationsActiveRoundedIcon fontSize="small" />
+                        </IconButton>
+                      ) : null}
+                      {notYet && opensAtDisplay ? (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ flexShrink: 0 }}
+                        >
+                          ab {formatDate(opensAtDisplay.toISOString())}
+                        </Typography>
+                      ) : (
+                        <Button
+                          variant="contained"
+                          size="small"
+                          sx={{ flexShrink: 0 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDone(c);
+                          }}
+                        >
+                          Erledigt
+                        </Button>
+                      )}
+                    </>
+                  ) : null}
                 </Stack>
               </Card>
             );
@@ -202,36 +199,6 @@ export function Putzplan() {
           }
         />
       )}
-
-      <Menu
-        anchorEl={menu?.el}
-        open={!!menu}
-        onClose={() => setMenu(null)}
-      >
-        <MenuItem
-          disabled={!menu?.chore.currentTurn}
-          onClick={() => {
-            if (menu) remind.mutate(menu.chore.id);
-            setMenu(null);
-          }}
-        >
-          <ListItemIcon>
-            <NotificationsActiveRoundedIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Erinnern</ListItemText>
-        </MenuItem>
-        <MenuItem
-          onClick={() => {
-            if (menu) navigate(`/putzplan/${menu.chore.id}/bearbeiten`);
-            setMenu(null);
-          }}
-        >
-          <ListItemIcon>
-            <EditRoundedIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Bearbeiten</ListItemText>
-        </MenuItem>
-      </Menu>
     </Box>
   );
 }
