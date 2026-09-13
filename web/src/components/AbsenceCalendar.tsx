@@ -23,14 +23,14 @@ function DayCell(
     colors: Map<string, { main: string; soft: string; ink: string }>;
   },
 ) {
-  const { meetingDays, absenceBarsByDay, colors, day, ...other } = props;
+  const { meetingDays, absenceBarsByDay, colors, day, outsideCurrentMonth, ...other } = props;
   const key = day.tz(WG_TZ).format("YYYY-MM-DD");
-  const bars = absenceBarsByDay.get(key) ?? [];
-  const hasMeeting = meetingDays.has(key);
+  const bars = outsideCurrentMonth ? [] : (absenceBarsByDay.get(key) ?? []);
+  const hasMeeting = !outsideCurrentMonth && meetingDays.has(key);
 
   return (
     <Box sx={{ position: "relative" }}>
-      <PickersDay {...other} day={day} />
+      <PickersDay {...other} day={day} outsideCurrentMonth={outsideCurrentMonth} />
       <Box
         sx={{
           position: "absolute",
