@@ -8,6 +8,7 @@ import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
 import { useAbsences } from "../api/absences.js";
 import { useMeetings } from "../api/meetings.js";
+import { useMembers } from "../api/members.js";
 import { useColorMap } from "../theme/useMemberColor.js";
 
 dayjs.extend(utc);
@@ -76,7 +77,10 @@ export function AbsenceCalendar({
 }) {
   const absences = useAbsences();
   const meetings = useMeetings();
+  const members = useMembers();
   const colors = useColorMap();
+
+  const activeMemberIds = new Set((members.data ?? []).map((m) => m.id));
 
   const meetingDays = new Set(
     (meetings.data ?? [])
@@ -86,6 +90,7 @@ export function AbsenceCalendar({
 
   const absenceBarsByDay = new Map<string, string[]>();
   for (const a of absences.data ?? []) {
+    if (!activeMemberIds.has(a.memberId)) continue;
     let d = dayjs(a.from).tz(WG_TZ).startOf("day");
     const end = dayjs(a.until).tz(WG_TZ).startOf("day");
     while (d.isSame(end) || d.isBefore(end)) {
