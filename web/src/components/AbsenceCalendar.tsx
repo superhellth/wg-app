@@ -28,6 +28,7 @@ function DayCell(
   const key = day.tz(WG_TZ).format("YYYY-MM-DD");
   const bars = outsideCurrentMonth ? [] : (absenceBarsByDay.get(key) ?? []);
   const meetingDots = outsideCurrentMonth ? [] : (meetingsByDay.get(key) ?? []);
+  const isSelected = other.selected;
 
   return (
     <Box sx={{ position: "relative" }}>
@@ -50,7 +51,12 @@ function DayCell(
             {meetingDots.slice(0, 4).map((id) => (
               <Box
                 key={id}
-                sx={{ width: 4, height: 4, borderRadius: "50%", bgcolor: "primary.main" }}
+                sx={{
+                  width: 4,
+                  height: 4,
+                  borderRadius: "50%",
+                  bgcolor: isSelected ? "primary.contrastText" : "primary.main",
+                }}
               />
             ))}
           </Box>
