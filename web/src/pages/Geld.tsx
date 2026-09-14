@@ -82,11 +82,20 @@ export function Geld() {
                         const counterpartId = outgoing ? t.toMemberId : t.fromMemberId;
                         return (
                           <Stack key={i} direction="row" alignItems="center" spacing={1}>
-                            <MemberAvatar memberId={counterpartId} size={22} />
-                            <Typography variant="body2" sx={{ flex: 1 }}>
-                              {outgoing ? "zahlt an " : "erhält von "}
-                              {members.get(counterpartId)?.displayName ?? "—"}
-                            </Typography>
+                            <Stack
+                              direction="row"
+                              alignItems="center"
+                              spacing={0.75}
+                              sx={{ flex: 1, minWidth: 0 }}
+                            >
+                              <Typography variant="body2" color="text.secondary">
+                                {outgoing ? "an" : "von"}
+                              </Typography>
+                              <MemberAvatar memberId={counterpartId} size={22} />
+                              <Typography variant="body2" noWrap>
+                                {members.get(counterpartId)?.displayName ?? "—"}
+                              </Typography>
+                            </Stack>
                             <MoneyText
                               cents={outgoing ? -t.amount : t.amount}
                               signed
