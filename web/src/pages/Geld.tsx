@@ -1,5 +1,3 @@
-import ArrowDownwardRoundedIcon from "@mui/icons-material/ArrowDownwardRounded";
-import ArrowUpwardRoundedIcon from "@mui/icons-material/ArrowUpwardRounded";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
 import Box from "@mui/material/Box";
@@ -84,16 +82,16 @@ export function Geld() {
                         const counterpartId = outgoing ? t.toMemberId : t.fromMemberId;
                         return (
                           <Stack key={i} direction="row" alignItems="center" spacing={1}>
-                            {outgoing ? (
-                              <ArrowUpwardRoundedIcon fontSize="small" sx={{ color: "error.main" }} />
-                            ) : (
-                              <ArrowDownwardRoundedIcon fontSize="small" sx={{ color: "success.main" }} />
-                            )}
                             <MemberAvatar memberId={counterpartId} size={22} />
                             <Typography variant="body2" sx={{ flex: 1 }}>
+                              {outgoing ? "zahlt an " : "erhält von "}
                               {members.get(counterpartId)?.displayName ?? "—"}
                             </Typography>
-                            <MoneyText cents={t.amount} size="0.85rem" />
+                            <MoneyText
+                              cents={outgoing ? -t.amount : t.amount}
+                              signed
+                              size="0.85rem"
+                            />
                             <IconButton
                               size="small"
                               aria-label="Als bezahlt markieren"
