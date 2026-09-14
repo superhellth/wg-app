@@ -30,9 +30,10 @@ export function formatSignedCents(cents: number): string {
   return s;
 }
 
-/** "vor 3 Stunden" */
+/** "vor 3 Stunden" — clamps small clock skew so a just-created record never reads as future ("in ein paar Sekunden"). */
 export function fromNow(iso: string): string {
-  return dayjs(iso).fromNow();
+  const d = dayjs(iso);
+  return d.isAfter(dayjs()) ? dayjs().fromNow() : d.fromNow();
 }
 
 /** "Mo, 14:30" style short date-time */

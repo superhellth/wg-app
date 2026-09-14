@@ -62,6 +62,8 @@ export function activityText(a: Activity, members: Map<string, Member>): string 
       return "hat eine Aufgabe erledigt";
     case "chore.swapped":
       return "hat eine Aufgabe getauscht";
+    case "chore.covered":
+      return d?.after?.executorId ? "hat eine Aufgabe übernommen" : "hat eine Übernahme rückgängig gemacht";
     case "chore.skipped": {
       const choreName = d?.snapshot?.choreName ?? "Aufgabe";
       const who = names(d?.snapshot?.skippedMembers, members);

@@ -1,5 +1,6 @@
 import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import CleaningServicesRoundedIcon from "@mui/icons-material/CleaningServicesRounded";
+import EventRoundedIcon from "@mui/icons-material/EventRounded";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
@@ -76,14 +77,17 @@ export function Start() {
             }
             sx={{ p: 2.5 }}
           >
-            <Stack direction="row" alignItems="center" justifyContent="space-between">
-              <Box>
-                <SectionLabel>Nächster Termin</SectionLabel>
-                <Typography variant="h6">{nextMeeting.title}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {formatDateTime(nextMeeting.startsAt)}
-                </Typography>
-              </Box>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+              <Stack direction="row" alignItems="center" spacing={1.5}>
+                <EventRoundedIcon color="action" />
+                <Box>
+                  <SectionLabel>Nächster Termin</SectionLabel>
+                  <Typography variant="h6">{nextMeeting.title}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {formatDateTime(nextMeeting.startsAt)}
+                  </Typography>
+                </Box>
+              </Stack>
               <ChevronRightRoundedIcon color="action" />
             </Stack>
           </CardActionArea>

@@ -117,8 +117,8 @@ No `fastify-type-provider-zod` — explicit and dependency-light.
   members with an `absences` row where `from <= now <= until`; if all away, take
   the next index anyway (no infinite loop). One transaction + push to the new
   assignee.
-- **Swap:** `PATCH` current turn's `assigneeId` (rotation position unchanged),
-  log `chore.swapped`.
+- **Swap:** `PATCH` current turn's `executorId` (rotation position unchanged),
+  log `chore.covered`.
 - **Skip:** set `skippedAt`, advance (member away), log `chore.skipped`.
 - **Overdue:** computed (`dueAt < now AND completedAt IS NULL`). Cron sends the push
   **once, 1 day after due** (`now ≥ dueAt + 24h AND overdueNotifiedAt IS NULL`),
