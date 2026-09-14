@@ -1,12 +1,14 @@
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Card from "@mui/material/Card";
 import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import dayjs from "dayjs";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -15,10 +17,14 @@ import {
   useDeleteChore,
   useUpdateChore,
 } from "../api/chores.js";
+import { useAbsences } from "../api/absences.js";
 import { useMembersMap } from "../api/members.js";
 import { useWgConfig } from "../api/wg.js";
 import { useConfirm } from "../components/ConfirmDialog.js";
+import { MemberAvatar } from "../components/MemberAvatar.js";
 import { SectionLabel } from "../components/SectionLabel.js";
+import { SwapTurnDialog } from "../components/SwapTurnDialog.js";
+import { formatDate } from "../lib/format.js";
 
 export function ChoreForm() {
   const navigate = useNavigate();
@@ -31,10 +37,23 @@ export function ChoreForm() {
   const remove = useDeleteChore();
   const confirm = useConfirm();
   const chores = useChores();
+  const absences = useAbsences();
   const existing = editing ? chores.data?.find((c) => c.id === id) : undefined;
 
   const [name, setName] = useState("");
   const [firstAssignee, setFirstAssignee] = useState("");
+  const [swapOpen, setSwapOpen] = useState(false);
+
+  const turn = existing?.currentTurn ?? null;
+  const doerId = turn ? turn.executorId ?? turn.assigneeId : null;
+  const covering = Boolean(turn && turn.executorId && turn.executorId !== turn.assigneeId);
+  const doerAway = useMemo(() => {
+    if (!doerId) return false;
+    const now = dayjs();
+    return (absences.data ?? []).some(
+      (a) => a.memberId === doerId && !dayjs(a.from).isAfter(now) && !dayjs(a.until).isBefore(now),
+    );
+  }, [absences.data, doerId]);
 
   const rotation = useMemo(() => config.data?.rotation ?? [], [config.data]);
 
@@ -101,6 +120,34 @@ export function ChoreForm() {
           fullWidth
         />
 
+        {editing && turn && doerId && (
+          <Box>
+            <SectionLabel>Aktuelle Runde</SectionLabel>
+            <Card sx={{ p: 1.75 }}>
+              <Stack direction="row" alignItems="center" spacing={1.5}>
+                <MemberAvatar memberId={doerId} size={40} />
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography noWrap sx={{ fontWeight: 600 }}>
+                    {members.get(doerId)?.displayName ?? "—"}
+                  </Typography>
+                  <Typography noWrap variant="caption" color="text.secondary">
+                    {[
+                      doerAway ? "abwesend" : null,
+                      covering ? `vertritt ${members.get(turn.assigneeId)?.displayName ?? "—"}` : null,
+                      `fällig ${formatDate(turn.dueAt)}`,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </Typography>
+                </Box>
+                <Button size="small" onClick={() => setSwapOpen(true)}>
+                  Vertretung
+                </Button>
+              </Stack>
+            </Card>
+          </Box>
+        )}
+
         {!editing && (
           <Box>
             <SectionLabel>Erste:r dran</SectionLabel>
@@ -130,6 +177,16 @@ export function ChoreForm() {
           </Button>
         )}
       </Stack>
+
+      {editing && id && turn && doerId && (
+        <SwapTurnDialog
+          open={swapOpen}
+          onClose={() => setSwapOpen(false)}
+          choreId={id}
+          choreName={name}
+          currentExecutorId={doerId}
+        />
+      )}
     </Box>
   );
 }
