@@ -86,7 +86,9 @@ export function Putzplan() {
             const opensAtDisplay = turn ? dayjs(turn.dueAt).subtract(6, "day") : null;
             const dueText = overdue
               ? `${overdue} Tag${overdue === 1 ? "" : "e"} überfällig`
-              : null;
+              : turn
+                ? `bis ${formatDate(turn.dueAt)}`
+                : null;
             const captionParts = [
               doerId ? members.get(doerId)?.displayName ?? "—" : null,
               doerId && awayMemberIds.has(doerId) ? "abwesend" : null,
