@@ -1,4 +1,5 @@
 import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
+import CleaningServicesRoundedIcon from "@mui/icons-material/CleaningServicesRounded";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
@@ -10,7 +11,7 @@ import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { useIdentity } from "../api/identity.js";
 import { useBalances } from "../api/balances.js";
-import { useChores, useChoreDone } from "../api/chores.js";
+import { useChores } from "../api/chores.js";
 import { useMeetings } from "../api/meetings.js";
 import { useMembersMap } from "../api/members.js";
 import { useRecentActivity } from "../api/activity.js";
@@ -27,7 +28,6 @@ export function Start() {
   const chores = useChores();
   const meetings = useMeetings();
   const activity = useRecentActivity(8);
-  const choreDone = useChoreDone();
 
   const me = memberId ? members.get(memberId) : undefined;
   const myBalance = (memberId && balances.data?.balances[memberId]) || 0;
@@ -67,42 +67,51 @@ export function Start() {
         </CardActionArea>
       </Card>
 
-      {/* Deine Aufgabe */}
-      {myTurn?.currentTurn && (
-        <Card sx={{ p: 2.5 }}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-            <SectionLabel>Deine Aufgabe</SectionLabel>
-            {dayjs(myTurn.currentTurn.dueAt).isBefore(dayjs()) && (
-              <Chip label="Überfällig" color="error" size="small" />
-            )}
-          </Stack>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
-            <Box>
-              <Typography variant="h6">{myTurn.name}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Fällig {formatDate(myTurn.currentTurn.dueAt)}
-              </Typography>
-            </Box>
-            <Button
-              variant="contained"
-              onClick={() => choreDone.mutate(myTurn.id)}
-              disabled={choreDone.isPending}
-            >
-              Erledigt
-            </Button>
-          </Stack>
-        </Card>
-      )}
-
       {/* Nächster Termin */}
       {nextMeeting && (
         <Card>
-          <CardActionArea onClick={() => navigate(`/termine/${nextMeeting.id}/bearbeiten`)} sx={{ p: 2.5 }}>
-            <SectionLabel>Nächster Termin</SectionLabel>
-            <Typography variant="h6">{nextMeeting.title}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {formatDateTime(nextMeeting.startsAt)}
-            </Typography>
+          <CardActionArea
+            onClick={() =>
+              navigate(`/termine?datum=${dayjs(nextMeeting.startsAt).format("YYYY-MM-DD")}`)
+            }
+            sx={{ p: 2.5 }}
+          >
+            <Stack direction="row" alignItems="center" justifyContent="space-between">
+              <Box>
+                <SectionLabel>Nächster Termin</SectionLabel>
+                <Typography variant="h6">{nextMeeting.title}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {formatDateTime(nextMeeting.startsAt)}
+                </Typography>
+              </Box>
+              <ChevronRightRoundedIcon color="action" />
+            </Stack>
+          </CardActionArea>
+        </Card>
+      )}
+
+      {/* Deine Aufgabe */}
+      {myTurn?.currentTurn && (
+        <Card>
+          <CardActionArea onClick={() => navigate("/putzplan")} sx={{ p: 2.5 }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+              <SectionLabel>Deine Aufgabe</SectionLabel>
+              {dayjs(myTurn.currentTurn.dueAt).isBefore(dayjs()) && (
+                <Chip label="Überfällig" color="error" size="small" />
+              )}
+            </Stack>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+              <Stack direction="row" alignItems="center" spacing={1.5}>
+                <CleaningServicesRoundedIcon color="action" />
+                <Box>
+                  <Typography variant="h6">{myTurn.name}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Fällig {formatDate(myTurn.currentTurn.dueAt)}
+                  </Typography>
+                </Box>
+              </Stack>
+              <ChevronRightRoundedIcon color="action" />
+            </Stack>
           </CardActionArea>
         </Card>
       )}

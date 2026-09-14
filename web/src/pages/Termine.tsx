@@ -12,7 +12,7 @@ import dayjs, { type Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAbsences } from "../api/absences.js";
 import { useMeetings } from "../api/meetings.js";
 import { useMembers } from "../api/members.js";
@@ -69,7 +69,11 @@ function CalendarView() {
   const allAbsences = useAbsences();
   const meetings = useMeetings();
   const members = useMembers();
-  const [selected, setSelected] = useState<Dayjs | null>(dayjs().tz(WG_TZ));
+  const [searchParams] = useSearchParams();
+  const dateParam = searchParams.get("datum");
+  const [selected, setSelected] = useState<Dayjs | null>(
+    dateParam && dayjs(dateParam).isValid() ? dayjs(dateParam).tz(WG_TZ) : dayjs().tz(WG_TZ),
+  );
   const activeMemberIds = new Set((members.data ?? []).map((m) => m.id));
 
   const selectedDay = selected?.tz(WG_TZ).startOf("day");
