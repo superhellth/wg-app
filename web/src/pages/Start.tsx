@@ -77,11 +77,17 @@ export function Start() {
             }
             sx={{ p: 2.5 }}
           >
-            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+            <SectionLabel>Nächster Termin</SectionLabel>
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+              spacing={2}
+              sx={{ mt: 1 }}
+            >
               <Stack direction="row" alignItems="center" spacing={1.5}>
                 <EventRoundedIcon color="action" />
                 <Box>
-                  <SectionLabel>Nächster Termin</SectionLabel>
                   <Typography variant="h6">{nextMeeting.title}</Typography>
                   <Typography variant="body2" color="text.secondary">
                     {formatDateTime(nextMeeting.startsAt)}
