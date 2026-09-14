@@ -1,8 +1,11 @@
-import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
+import ArrowDownwardRoundedIcon from "@mui/icons-material/ArrowDownwardRounded";
+import ArrowUpwardRoundedIcon from "@mui/icons-material/ArrowUpwardRounded";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
+import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
+import Collapse from "@mui/material/Collapse";
 import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
@@ -29,6 +32,7 @@ export function Geld() {
     open: boolean;
     prefill?: { fromMemberId: string; toMemberId: string; amount: number };
   }>({ open: false });
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const entries = Object.entries(balances.data?.balances ?? {})
     .filter(([id, bal]) => bal !== 0 || !members.get(id)?.archivedAt)
@@ -42,19 +46,80 @@ export function Geld() {
         <Box>
           <SectionLabel>Salden</SectionLabel>
           <Card sx={{ px: 2 }}>
-            {entries.map(([id, bal], i) => (
-              <Stack
-                key={id}
-                direction="row"
-                alignItems="center"
-                spacing={1.5}
-                sx={{ py: 1.25, borderTop: i === 0 ? "none" : "1px solid", borderColor: "divider" }}
-              >
-                <MemberAvatar memberId={id} size={32} />
-                <Typography sx={{ flex: 1 }}>{members.get(id)?.displayName ?? "—"}</Typography>
-                <MoneyText cents={bal} signed />
-              </Stack>
-            ))}
+            {entries.map(([id, bal], i) => {
+              const isExpanded = expandedId === id;
+              const memberTransfers = transfers.filter(
+                (t) => t.fromMemberId === id || t.toMemberId === id
+              );
+              return (
+                <Box key={id} sx={{ borderTop: i === 0 ? "none" : "1px solid", borderColor: "divider" }}>
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    spacing={1.5}
+                    sx={{ py: 1.25, cursor: "pointer" }}
+                    onClick={() => setExpandedId(isExpanded ? null : id)}
+                  >
+                    <MemberAvatar memberId={id} size={32} />
+                    <Typography sx={{ flex: 1 }}>{members.get(id)?.displayName ?? "—"}</Typography>
+                    <MoneyText cents={bal} signed />
+                    <ExpandMoreRoundedIcon
+                      fontSize="small"
+                      sx={{
+                        color: "action.disabled",
+                        transform: isExpanded ? "rotate(180deg)" : "none",
+                        transition: "transform 0.15s",
+                      }}
+                    />
+                  </Stack>
+                  <Collapse in={isExpanded}>
+                    <Stack spacing={0.5} sx={{ pb: 1.25, pl: "44px" }}>
+                      {memberTransfers.length === 0 && (
+                        <Typography variant="body2" color="text.secondary">
+                          Keine Überweisung nötig.
+                        </Typography>
+                      )}
+                      {memberTransfers.map((t, i) => {
+                        const outgoing = t.fromMemberId === id;
+                        const counterpartId = outgoing ? t.toMemberId : t.fromMemberId;
+                        return (
+                          <Stack key={i} direction="row" alignItems="center" spacing={1}>
+                            {outgoing ? (
+                              <ArrowUpwardRoundedIcon fontSize="small" sx={{ color: "error.main" }} />
+                            ) : (
+                              <ArrowDownwardRoundedIcon fontSize="small" sx={{ color: "success.main" }} />
+                            )}
+                            <MemberAvatar memberId={counterpartId} size={22} />
+                            <Typography variant="body2" sx={{ flex: 1 }}>
+                              {members.get(counterpartId)?.displayName ?? "—"}
+                            </Typography>
+                            <MoneyText cents={t.amount} size="0.85rem" />
+                            <IconButton
+                              size="small"
+                              aria-label="Als bezahlt markieren"
+                              sx={{ flexShrink: 0, color: "primary.main" }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDialog({
+                                  open: true,
+                                  prefill: {
+                                    fromMemberId: t.fromMemberId,
+                                    toMemberId: t.toMemberId,
+                                    amount: t.amount,
+                                  },
+                                });
+                              }}
+                            >
+                              <CheckRoundedIcon fontSize="small" />
+                            </IconButton>
+                          </Stack>
+                        );
+                      })}
+                    </Stack>
+                  </Collapse>
+                </Box>
+              );
+            })}
             {entries.length === 0 && (
               <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
                 Noch keine Ausgaben.
@@ -62,85 +127,6 @@ export function Geld() {
             )}
           </Card>
         </Box>
-
-        {/* Ausgleichen */}
-        {transfers.length > 0 && (
-          <Box>
-            <SectionLabel>Ausgleichen</SectionLabel>
-            <Card sx={{ px: 2 }}>
-              {transfers.map((t, i) => (
-                <Stack
-                  key={i}
-                  direction="row"
-                  alignItems="center"
-                  spacing={1}
-                  sx={{
-                    py: 1.25,
-                    borderTop: i === 0 ? "none" : "1px solid",
-                    borderColor: "divider",
-                  }}
-                >
-                  <MemberAvatar memberId={t.fromMemberId} size={28} />
-                  <Box
-                    sx={{
-                      flex: 1,
-                      minWidth: 8,
-                      position: "relative",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        position: "absolute",
-                        left: 0,
-                        right: 0,
-                        top: "50%",
-                        height: "2px",
-                        backgroundImage:
-                          "repeating-linear-gradient(to right, currentColor 0, currentColor 3px, transparent 3px, transparent 7px)",
-                        color: "action.disabled",
-                      }}
-                    />
-                    <Box sx={{ bgcolor: "background.paper", px: 0.75, zIndex: 1 }}>
-                      <MoneyText cents={t.amount} size="0.85rem" />
-                    </Box>
-                    <ArrowForwardRoundedIcon
-                      fontSize="small"
-                      sx={{
-                        position: "absolute",
-                        right: -4,
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        color: "action.disabled",
-                        bgcolor: "background.paper",
-                      }}
-                    />
-                  </Box>
-                  <MemberAvatar memberId={t.toMemberId} size={28} />
-                  <IconButton
-                    size="small"
-                    aria-label="Als bezahlt markieren"
-                    sx={{ flexShrink: 0, color: "primary.main" }}
-                    onClick={() =>
-                      setDialog({
-                        open: true,
-                        prefill: {
-                          fromMemberId: t.fromMemberId,
-                          toMemberId: t.toMemberId,
-                          amount: t.amount,
-                        },
-                      })
-                    }
-                  >
-                    <CheckRoundedIcon fontSize="small" />
-                  </IconButton>
-                </Stack>
-              ))}
-            </Card>
-          </Box>
-        )}
 
         <Button variant="outlined" onClick={() => setDialog({ open: true })}>
           Zahlung erfassen
