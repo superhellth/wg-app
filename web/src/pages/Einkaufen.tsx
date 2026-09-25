@@ -15,7 +15,7 @@ import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "../api/client.js";
 import {
@@ -24,6 +24,7 @@ import {
   useMarkBought,
   useShopping,
 } from "../api/shopping.js";
+import { AddFab } from "../components/Fab.js";
 import { EmptyState } from "../components/EmptyState.js";
 
 type Toast = { msg: string; severity: "success" | "info" | "warning" };
@@ -37,6 +38,7 @@ export function Einkaufen() {
   const bought = useMarkBought();
   const remove = useDeleteShoppingItem();
 
+  const inputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<Toast | null>(null);
@@ -144,6 +146,7 @@ export function Einkaufen() {
           renderInput={(params) => (
             <TextField
               {...params}
+              inputRef={inputRef}
               placeholder="Artikel hinzufügen…"
               InputProps={{
                 ...params.InputProps,
@@ -201,6 +204,17 @@ export function Einkaufen() {
             </Stack>
           ))}
         </Card>
+      )}
+
+      {tab === "active" && (
+        <AddFab
+          label="Artikel hinzufügen"
+          bottom={selected.size ? 140 : 80}
+          onClick={() => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            inputRef.current?.focus({ preventScroll: true });
+          }}
+        />
       )}
 
       {/* selection action bar — sits just above the bottom nav */}
