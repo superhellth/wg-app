@@ -8,6 +8,7 @@ import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import { useEffect, useState } from "react";
+import { useIdentity } from "../api/identity.js";
 import { useCreateSettlement } from "../api/settlements.js";
 import { useMembers } from "../api/members.js";
 import { formatCents, parseEurToCents } from "../lib/format.js";
@@ -21,6 +22,7 @@ interface Props {
 /** Record a real-world payment (ledger only). Used by suggested transfers + manual. */
 export function SettlementDialog({ open, onClose, prefill }: Props) {
   const { data: members } = useMembers(true);
+  const { memberId } = useIdentity();
   const create = useCreateSettlement();
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -28,7 +30,7 @@ export function SettlementDialog({ open, onClose, prefill }: Props) {
 
   useEffect(() => {
     if (open) {
-      setFrom(prefill?.fromMemberId ?? "");
+      setFrom(prefill?.fromMemberId ?? memberId ?? "");
       setTo(prefill?.toMemberId ?? "");
       setAmountStr(prefill ? (prefill.amount / 100).toFixed(2).replace(".", ",") : "");
     }
