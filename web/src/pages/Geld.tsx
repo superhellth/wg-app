@@ -1,11 +1,14 @@
+import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
+import PaymentsRoundedIcon from "@mui/icons-material/PaymentsRounded";
+import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import Collapse from "@mui/material/Collapse";
-import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
+import SpeedDial from "@mui/material/SpeedDial";
+import SpeedDialAction from "@mui/material/SpeedDialAction";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { useState } from "react";
@@ -13,7 +16,6 @@ import { useNavigate } from "react-router-dom";
 import { useBalances } from "../api/balances.js";
 import { useExpenses } from "../api/expenses.js";
 import { useMembersMap } from "../api/members.js";
-import { AddFab } from "../components/Fab.js";
 import { MemberAvatar } from "../components/MemberAvatar.js";
 import { MoneyText } from "../components/MoneyText.js";
 import { SectionLabel } from "../components/SectionLabel.js";
@@ -30,6 +32,7 @@ export function Geld() {
     open: boolean;
     prefill?: { fromMemberId: string; toMemberId: string; amount: number };
   }>({ open: false });
+  const [dialOpen, setDialOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const entries = Object.entries(balances.data?.balances ?? {})
@@ -135,12 +138,6 @@ export function Geld() {
           </Card>
         </Box>
 
-        <Button variant="outlined" onClick={() => setDialog({ open: true })}>
-          Zahlung erfassen
-        </Button>
-
-        <Divider />
-
         {/* Ausgaben */}
         <Box>
           <SectionLabel>Ausgaben</SectionLabel>
@@ -175,7 +172,33 @@ export function Geld() {
         </Box>
       </Stack>
 
-      <AddFab label="Ausgabe hinzufügen" onClick={() => navigate("/geld/neu")} />
+      <SpeedDial
+        ariaLabel="Neu"
+        icon={<AddRoundedIcon />}
+        open={dialOpen}
+        onOpen={() => setDialOpen(true)}
+        onClose={() => setDialOpen(false)}
+        sx={{ position: "fixed", bottom: 80, right: 16, zIndex: 1200 }}
+      >
+        <SpeedDialAction
+          icon={<ReceiptLongRoundedIcon />}
+          tooltipTitle="Ausgabe"
+          tooltipOpen
+          onClick={() => {
+            setDialOpen(false);
+            navigate("/geld/neu");
+          }}
+        />
+        <SpeedDialAction
+          icon={<PaymentsRoundedIcon />}
+          tooltipTitle="Zahlung"
+          tooltipOpen
+          onClick={() => {
+            setDialOpen(false);
+            setDialog({ open: true });
+          }}
+        />
+      </SpeedDial>
       <SettlementDialog
         open={dialog.open}
         prefill={dialog.prefill}

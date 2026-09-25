@@ -34,6 +34,11 @@ export function SettlementDialog({ open, onClose, prefill }: Props) {
     }
   }, [open, prefill]);
 
+  // Hide archived members, unless one is already selected (e.g. prefilled transfer).
+  const options = (members ?? []).filter(
+    (m) => !m.archivedAt || m.id === from || m.id === to,
+  );
+
   const amount = parseEurToCents(amountStr) ?? 0;
   const valid = from && to && from !== to && amount > 0 && !create.isPending;
 
@@ -50,12 +55,12 @@ export function SettlementDialog({ open, onClose, prefill }: Props) {
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           <TextField select label="Von" value={from} onChange={(e) => setFrom(e.target.value)} fullWidth>
-            {(members ?? []).map((m) => (
+            {options.map((m) => (
               <MenuItem key={m.id} value={m.id}>{m.displayName}</MenuItem>
             ))}
           </TextField>
           <TextField select label="An" value={to} onChange={(e) => setTo(e.target.value)} fullWidth>
-            {(members ?? []).map((m) => (
+            {options.map((m) => (
               <MenuItem key={m.id} value={m.id}>{m.displayName}</MenuItem>
             ))}
           </TextField>
