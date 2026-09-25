@@ -26,6 +26,7 @@ import {
 } from "../api/shopping.js";
 import { AddFab } from "../components/Fab.js";
 import { EmptyState } from "../components/EmptyState.js";
+import { fromNow } from "../lib/format.js";
 
 type Toast = { msg: string; severity: "success" | "info" | "warning" };
 
@@ -169,41 +170,55 @@ export function Einkaufen() {
           hint={tab === "active" ? "Füge oben den ersten Artikel hinzu." : undefined}
         />
       ) : (
-        <Card sx={{ px: 1 }}>
-          {items.map((item, i) => (
-            <Stack
-              key={item.id}
-              direction="row"
-              alignItems="center"
-              spacing={1}
-              sx={{ py: 0.5, borderTop: i === 0 ? "none" : "1px solid", borderColor: "divider" }}
-            >
-              {tab === "active" ? (
-                <>
-                  <Checkbox
-                    checked={selected.has(item.id)}
-                    onChange={() => toggleSel(item.id)}
-                  />
-                  <Typography sx={{ flex: 1 }}>{item.name}</Typography>
-                  <IconButton size="small" onClick={() => remove.mutate(item.id)}>
-                    <DeleteOutlineRoundedIcon fontSize="small" />
-                  </IconButton>
-                </>
-              ) : (
-                <>
-                  <Typography sx={{ flex: 1, color: "text.secondary" }}>{item.name}</Typography>
-                  <IconButton
-                    size="small"
-                    onClick={() => addItem(item.name)}
-                    disabled={activeNames.has(item.name.trim().toLowerCase())}
-                  >
-                    <ReplayRoundedIcon fontSize="small" />
-                  </IconButton>
-                </>
-              )}
-            </Stack>
-          ))}
-        </Card>
+        <Stack spacing={1}>
+          {items.map((item) => {
+            const isSel = tab === "active" && selected.has(item.id);
+            return (
+              <Card
+                key={item.id}
+                sx={{
+                  py: 0.75,
+                  pl: 0.75,
+                  pr: 1.5,
+                  borderColor: isSel ? "primary.main" : undefined,
+                }}
+              >
+                <Stack direction="row" alignItems="center" spacing={0.5}>
+                  {tab === "active" && (
+                    <Checkbox checked={isSel} onChange={() => toggleSel(item.id)} />
+                  )}
+                  <Box sx={{ flex: 1, minWidth: 0, pl: tab === "active" ? 0 : 1 }}>
+                    <Typography
+                      noWrap
+                      sx={{
+                        fontWeight: tab === "active" ? 600 : 400,
+                        color: tab === "active" ? "text.primary" : "text.secondary",
+                      }}
+                    >
+                      {item.name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {fromNow(item.createdAt)}
+                    </Typography>
+                  </Box>
+                  {tab === "active" ? (
+                    <IconButton size="small" onClick={() => remove.mutate(item.id)}>
+                      <DeleteOutlineRoundedIcon fontSize="small" />
+                    </IconButton>
+                  ) : (
+                    <IconButton
+                      size="small"
+                      onClick={() => addItem(item.name)}
+                      disabled={activeNames.has(item.name.trim().toLowerCase())}
+                    >
+                      <ReplayRoundedIcon fontSize="small" />
+                    </IconButton>
+                  )}
+                </Stack>
+              </Card>
+            );
+          })}
+        </Stack>
       )}
 
       {tab === "active" && (
