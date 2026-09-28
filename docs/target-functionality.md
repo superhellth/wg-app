@@ -90,11 +90,13 @@ money/ledger system (§2) on its billing cycle.
 
 ## 4. Shopping list
 
-- **One shared list** for the whole WG.
+- **Two lists:** the shared **WG** list and a **private** list per member (tabs "WG" / "Privat").
 - **Item fields:** name only.
-- **Bought items:** move to a **history** (not deleted) for easy re-add.
-- No categories, no separate lists, no favorites/staples list (history covers quick re-add).
-- **Money bridge (convenience only):** select one or more list items → action **"Create expense entry"** → opens the money/expense form prefilled. The list itself tracks no money and is not otherwise linked to the ledger.
+- **Private list is hidden, not secret:** identity is trust-based (`X-Member-Id` is unverified), so impersonation can read it. Private add/bought/delete write no feed entry and never push.
+- **Bought items:** stay stored (not deleted) and feed **suggestions** in the add dialog, per list. No Verlauf view.
+- **Adding:** FAB opens a dialog: free-text field plus suggestion cards from bought items of the same list.
+- No categories, no favorites/staples list.
+- **Money bridge (convenience only), WG list only:** select items → **"Ausgabe"** → expense form prefilled. Private items cannot be billed. The list itself tracks no money.
 
 ---
 
@@ -155,6 +157,6 @@ money/ledger system (§2) on its billing cycle.
 - Receiver confirmation of settlements
 - Ad-hoc one-off chore tasks
 - Chore gamification / scorekeeping
-- Shopping categories, multiple lists, favorites
+- Shopping categories, favorites (a per-member private list exists)
 - Meeting location / notes / bring-list
 - Push for money & shopping events

@@ -100,7 +100,7 @@ Core tables (indicative):
 - `expense_shares` — per-participant split in cents (resolved from equal / exact / shares / percent at write time).
 - `settlements` — payer, payee, amount (partial allowed; no confirmation step; editable + hard-deletable).
 - `fixed_costs` — **Financial Overview** board (name, amount, cycle, contract-holder). Always split equally among active members; per-person share computed on read. **Standalone, not linked to the ledger.**
-- `shopping_items` — name only; `bought_at` moves items to history.
+- `shopping_items` — name only; nullable `owner_member_id` (null = WG list, else private list); `bought_at` soft-deletes and feeds suggestions.
 - `chores` — frequency, rotation order.
 - `chore_turns` — assignee, `rotation_index`, due date, `completed_at`, `skipped_at`, `overdue_notified_at`.
 - `meetings` — fixed events only (title, `starts_at`); `last_reminder_at` (reminder dedup; fixed 1h lead).

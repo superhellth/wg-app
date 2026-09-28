@@ -96,7 +96,7 @@ Three-state gate, identity in `localStorage` (`src/api/identity.ts`, reactive vi
 ## Pages (all under `AppShell`)
 
 `Start` (dashboard) · `Geld` + `ExpenseForm` + `SettlementDialog` · `Putzplan` +
-`ChoreForm` (reorderable rotation) · `Einkaufen` (multi-select → bridge, Verlauf) ·
+`ChoreForm` (reorderable rotation) · `Einkaufen` (WG/Privat tabs, multi-select → bridge on WG only, FAB → `AddItemDialog` with suggestion cards) ·
 `Termine` + `MeetingDetail` (date + name only, no RSVP/polling) + `MeetingForm`
 (title + MUI date picker), list/Kalender toggle with `AbsenceCalendar` +
 absence planning dialog · `Fixkosten` (computed per-person share; dialog adds a

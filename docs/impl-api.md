@@ -156,13 +156,14 @@ No `fastify-type-provider-zod` — explicit and dependency-light.
 
 ## Shopping
 
-- `GET /api/shopping` → active (`boughtAt IS NULL`); `?history=true` → bought.
-- `POST /api/shopping { name }`; `PATCH /api/shopping/:id/bought`; re-add = POST same
-  name. `DELETE /api/shopping/:id` → **hard delete** (typos; distinct from "bought").
+- `shopping_items.ownerMemberId` nullable: `null` = WG list, else private to that member.
+- `GET /api/shopping?scope=wg|personal&history=` (default `wg`, active). `personal` → actor's own items. `requireMember` on all routes.
+- `POST /api/shopping { name, personal? }` (`personal` → owner = actor). Active-name uniqueness is case-insensitive **per owner**.
+- `PATCH /api/shopping/:id/bought`; `DELETE /api/shopping/:id` → **hard delete** (typos). Another member's personal item → **404**.
 - **Bridge is client-driven but settled server-side:** the bridge prefills the
   expense form; on expense create the server marks the passed `shoppingItemIds`
-  bought atomically (see Money). The list itself tracks no money.
-- Logs `shopping.added` / `shopping.bought` to the feed.
+  bought atomically (see Money). Personal items in that list → **400**.
+- Logs `shopping.added` / `shopping.bought` to the feed for **WG items only**; personal items write no `activity` row.
 
 ## Fixed costs (Financial Overview)
 
