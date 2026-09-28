@@ -78,6 +78,13 @@
       "when": 1786888441642,
       "tag": "0010_purple_black_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790625266821,
+      "tag": "0011_colorful_bloodstorm",
+      "breakpoints": true
     }
   ]
 }

@@ -121,6 +121,8 @@ export const shoppingItems = pgTable("shopping_items", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   addedByMemberId: uuid("added_by_member_id").references(() => members.id).notNull(),
+  // null = shared WG list; set = private to that member
+  ownerMemberId: uuid("owner_member_id").references(() => members.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   boughtAt: timestamp("bought_at", { withTimezone: true }),
 });
