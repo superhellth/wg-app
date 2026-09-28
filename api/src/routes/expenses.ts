@@ -6,11 +6,11 @@ import {
   type SplitType,
   updateExpenseSchema,
 } from "@wg/shared";
-import { desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db/client.js";
 import { logActivity } from "../lib/activity.js";
-import { NotFoundError } from "../lib/errors.js";
+import { BadRequestError, NotFoundError } from "../lib/errors.js";
 import { parse } from "../lib/parse.js";
 import { requireMember } from "../plugins/auth.js";
 
@@ -72,6 +72,20 @@ export async function expensesRoutes(app: FastifyInstance) {
 
       // Atomic shopping bridge: mark selected items bought.
       if (body.shoppingItemIds?.length) {
+        // Personal items never go through the shared ledger.
+        const [personal] = await tx
+          .select({ id: schema.shoppingItems.id })
+          .from(schema.shoppingItems)
+          .where(
+            and(
+              inArray(schema.shoppingItems.id, body.shoppingItemIds),
+              isNotNull(schema.shoppingItems.ownerMemberId),
+            ),
+          )
+          .limit(1);
+        if (personal) {
+          throw new BadRequestError("Private Artikel können nicht abgerechnet werden");
+        }
         const items = await tx
           .update(schema.shoppingItems)
           .set({ boughtAt: new Date() })

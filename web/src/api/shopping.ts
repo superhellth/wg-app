@@ -1,11 +1,11 @@
-import type { CreateShoppingItem, ShoppingItem } from "@wg/shared";
+import type { CreateShoppingItem, ShoppingItem, ShoppingScope } from "@wg/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { http } from "./client.js";
 import { qk } from "./keys.js";
 
 export const shoppingApi = {
-  list: (history = false) =>
-    http<ShoppingItem[]>(`/api/shopping?history=${history}`),
+  list: (scope: ShoppingScope, history = false) =>
+    http<ShoppingItem[]>(`/api/shopping?scope=${scope}&history=${history}`),
   add: (body: CreateShoppingItem) =>
     http<ShoppingItem>("/api/shopping", {
       method: "POST",
@@ -16,10 +16,10 @@ export const shoppingApi = {
   remove: (id: string) => http<void>(`/api/shopping/${id}`, { method: "DELETE" }),
 };
 
-export function useShopping(history = false) {
+export function useShopping(scope: ShoppingScope, history = false) {
   return useQuery({
-    queryKey: qk.shopping(history),
-    queryFn: () => shoppingApi.list(history),
+    queryKey: qk.shopping(scope, history),
+    queryFn: () => shoppingApi.list(scope, history),
   });
 }
 

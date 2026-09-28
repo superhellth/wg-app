@@ -1,0 +1,2 @@
+ALTER TABLE "shopping_items" ADD COLUMN "owner_member_id" uuid;--> statement-breakpoint
+ALTER TABLE "shopping_items" ADD CONSTRAINT "shopping_items_owner_member_id_members_id_fk" FOREIGN KEY ("owner_member_id") REFERENCES "public"."members"("id") ON DELETE no action ON UPDATE no action;
