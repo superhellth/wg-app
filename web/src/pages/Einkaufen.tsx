@@ -1,76 +1,33 @@
-import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
-import ReplayRoundedIcon from "@mui/icons-material/ReplayRounded";
-import Alert from "@mui/material/Alert";
-import Autocomplete from "@mui/material/Autocomplete";
+import type { ShoppingScope } from "@wg/shared";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import Checkbox from "@mui/material/Checkbox";
 import IconButton from "@mui/material/IconButton";
-import InputAdornment from "@mui/material/InputAdornment";
-import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
-import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ApiError } from "../api/client.js";
-import {
-  useAddShoppingItem,
-  useDeleteShoppingItem,
-  useMarkBought,
-  useShopping,
-} from "../api/shopping.js";
-import { AddFab } from "../components/Fab.js";
+import { useDeleteShoppingItem, useMarkBought, useShopping } from "../api/shopping.js";
+import { AddItemDialog } from "../components/AddItemDialog.js";
 import { EmptyState } from "../components/EmptyState.js";
+import { AddFab } from "../components/Fab.js";
 import { fromNow } from "../lib/format.js";
-
-type Toast = { msg: string; severity: "success" | "info" | "warning" };
 
 export function Einkaufen() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"active" | "history">("active");
-  const active = useShopping(false);
-  const history = useShopping(true);
-  const add = useAddShoppingItem();
+  const [scope, setScope] = useState<ShoppingScope>("wg");
+  const list = useShopping(scope);
   const bought = useMarkBought();
   const remove = useDeleteShoppingItem();
 
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [name, setName] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [toast, setToast] = useState<Toast | null>(null);
 
-  const activeNames = new Set(
-    (active.data ?? []).map((i) => i.name.trim().toLowerCase()),
-  );
-
-  // History deduped by name (case-insensitive) — each article appears once,
-  // most recent first (the query is createdAt desc).
-  const histSeen = new Set<string>();
-  const historyItems = (history.data ?? []).filter((i) => {
-    const k = i.name.trim().toLowerCase();
-    if (histSeen.has(k)) return false;
-    histSeen.add(k);
-    return true;
-  });
-
-  const items = tab === "active" ? active.data ?? [] : historyItems;
-
-  // History names (deduped, case-insensitive) that aren't already on the list —
-  // suggested while typing.
-  const suggestions: string[] = [];
-  const seen = new Set<string>();
-  for (const i of history.data ?? []) {
-    const n = i.name.trim();
-    const k = n.toLowerCase();
-    if (!n || seen.has(k) || activeNames.has(k)) continue;
-    seen.add(k);
-    suggestions.push(n);
-  }
+  const items = list.data ?? [];
 
   const toggleSel = (id: string) =>
     setSelected((p) => {
@@ -79,37 +36,7 @@ export function Einkaufen() {
       return n;
     });
 
-  // Add an item with feedback. Guards duplicates client-side; the server is the
-  // backstop (409 → same message). Used by the input and the history re-add.
-  const addItem = (raw: string) => {
-    const n = raw.trim();
-    if (!n) return;
-    if (activeNames.has(n.toLowerCase())) {
-      setToast({ msg: `„${n}" steht schon auf der Liste`, severity: "info" });
-      return;
-    }
-    add.mutate(
-      { name: n },
-      {
-        onSuccess: () => setToast({ msg: `„${n}" hinzugefügt`, severity: "success" }),
-        onError: (e) =>
-          setToast({
-            msg:
-              e instanceof ApiError && e.code === "conflict"
-                ? `„${n}" steht schon auf der Liste`
-                : "Konnte nicht hinzugefügt werden",
-            severity: "warning",
-          }),
-      },
-    );
-  };
-
-  const submitAdd = () => {
-    addItem(name);
-    setName("");
-  };
-
-  const selectedItems = (active.data ?? []).filter((i) => selected.has(i.id));
+  const selectedItems = items.filter((i) => selected.has(i.id));
 
   const createExpense = () => {
     const ids = selectedItems.map((i) => i.id).join(",");
@@ -124,55 +51,28 @@ export function Einkaufen() {
 
   return (
     <Box sx={{ p: 2, pb: selected.size ? 12 : 2 }}>
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="fullWidth" sx={{ mb: 2 }}>
-        <Tab value="active" label="Liste" />
-        <Tab value="history" label="Verlauf" />
+      <Tabs
+        value={scope}
+        onChange={(_, v) => {
+          setScope(v);
+          setSelected(new Set()); // a personal id must never reach "Ausgabe"
+        }}
+        variant="fullWidth"
+        sx={{ mb: 2 }}
+      >
+        <Tab value="wg" label="WG" />
+        <Tab value="personal" label="Privat" />
       </Tabs>
-
-      {tab === "active" && (
-        <Autocomplete
-          freeSolo
-          disableClearable
-          options={suggestions}
-          inputValue={name}
-          onInputChange={(_, v) => setName(v)}
-          onChange={(_, v) => {
-            // Picking a suggestion (or Enter on free text) adds immediately.
-            if (typeof v === "string" && v.trim()) addItem(v);
-          }}
-          clearOnBlur={false}
-          fullWidth
-          size="small"
-          sx={{ mb: 2 }}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              inputRef={inputRef}
-              placeholder="Artikel hinzufügen…"
-              InputProps={{
-                ...params.InputProps,
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton size="small" disabled={!name.trim()} onClick={submitAdd}>
-                      <AddRoundedIcon />
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-          )}
-        />
-      )}
 
       {items.length === 0 ? (
         <EmptyState
-          title={tab === "active" ? "Liste ist leer" : "Noch nichts gekauft"}
-          hint={tab === "active" ? "Füge oben den ersten Artikel hinzu." : undefined}
+          title="Liste ist leer"
+          hint="Tippe auf + und füge den ersten Artikel hinzu."
         />
       ) : (
         <Stack spacing={1}>
           {items.map((item) => {
-            const isSel = tab === "active" && selected.has(item.id);
+            const isSel = selected.has(item.id);
             return (
               <Card
                 key={item.id}
@@ -184,36 +84,22 @@ export function Einkaufen() {
                 }}
               >
                 <Stack direction="row" alignItems="center" spacing={0.5}>
-                  {tab === "active" && (
-                    <Checkbox checked={isSel} onChange={() => toggleSel(item.id)} />
-                  )}
-                  <Box sx={{ flex: 1, minWidth: 0, pl: tab === "active" ? 0 : 1 }}>
-                    <Typography
-                      noWrap
-                      sx={{
-                        fontWeight: tab === "active" ? 600 : 400,
-                        color: tab === "active" ? "text.primary" : "text.secondary",
-                      }}
-                    >
+                  <Checkbox checked={isSel} onChange={() => toggleSel(item.id)} />
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography noWrap sx={{ fontWeight: 600 }}>
                       {item.name}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       {fromNow(item.createdAt)}
                     </Typography>
                   </Box>
-                  {tab === "active" ? (
-                    <IconButton size="small" onClick={() => remove.mutate(item.id)}>
-                      <DeleteOutlineRoundedIcon fontSize="small" />
-                    </IconButton>
-                  ) : (
-                    <IconButton
-                      size="small"
-                      onClick={() => addItem(item.name)}
-                      disabled={activeNames.has(item.name.trim().toLowerCase())}
-                    >
-                      <ReplayRoundedIcon fontSize="small" />
-                    </IconButton>
-                  )}
+                  <IconButton
+                    size="small"
+                    aria-label="Löschen"
+                    onClick={() => remove.mutate(item.id)}
+                  >
+                    <DeleteOutlineRoundedIcon fontSize="small" />
+                  </IconButton>
                 </Stack>
               </Card>
             );
@@ -221,16 +107,16 @@ export function Einkaufen() {
         </Stack>
       )}
 
-      {tab === "active" && (
-        <AddFab
-          label="Artikel hinzufügen"
-          bottom={selected.size ? 140 : 80}
-          onClick={() => {
-            window.scrollTo({ top: 0, behavior: "smooth" });
-            inputRef.current?.focus({ preventScroll: true });
-          }}
-        />
-      )}
+      <AddFab
+        label="Artikel hinzufügen"
+        bottom={selected.size ? 140 : 80}
+        onClick={() => setDialogOpen(true)}
+      />
+      <AddItemDialog
+        open={dialogOpen}
+        scope={scope}
+        onClose={() => setDialogOpen(false)}
+      />
 
       {/* selection action bar — sits just above the bottom nav */}
       {selected.size > 0 && (
@@ -260,29 +146,14 @@ export function Einkaufen() {
             <Button variant="contained" fullWidth onClick={markSelectedBought}>
               Eingekauft ({selected.size})
             </Button>
-            <Button variant="text" onClick={createExpense}>
-              Ausgabe
-            </Button>
+            {scope === "wg" && (
+              <Button variant="text" onClick={createExpense}>
+                Ausgabe
+              </Button>
+            )}
           </Box>
         </Box>
       )}
-
-      <Snackbar
-        open={!!toast}
-        autoHideDuration={2500}
-        onClose={() => setToast(null)}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        {toast ? (
-          <Alert
-            severity={toast.severity}
-            variant="filled"
-            onClose={() => setToast(null)}
-          >
-            {toast.msg}
-          </Alert>
-        ) : undefined}
-      </Snackbar>
     </Box>
   );
 }
