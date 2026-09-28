@@ -149,7 +149,7 @@ export function AddItemDialog({
       <DialogTitle>
         Artikel hinzufügen
         <Typography variant="caption" color="text.secondary" display="block">
-          zu: {scope === "wg" ? "WG-List" : "Deine List"}
+          {scope === "wg" ? "WG-Liste" : "Deine Liste"}
         </Typography>
       </DialogTitle>
       <DialogContent sx={{ display: "flex", flexDirection: "column", overflow: "hidden", pb: 0 }}>
@@ -190,7 +190,7 @@ export function AddItemDialog({
               Vorschläge
             </Typography>
             {suggestions.map((n) => (
-              <Card key={n.toLowerCase()} sx={{ py: 0 }}>
+              <Card key={n.toLowerCase()} sx={{ py: 0, flexShrink: 0 }}>
                 <CardActionArea onMouseDown={(e) => e.preventDefault()} onClick={() => addItem(n, false)} sx={{ py: 1, px: 1.5 }}>
                   <Typography noWrap sx={{ fontWeight: 600 }}>
                     {n}
