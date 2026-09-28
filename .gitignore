@@ -1,7 +1,11 @@
 # dependencies
 node_modules/
 .pnpm-store/
+
+# Claude docs
+.claude/
 .superpowers/
+docs/superpowers/
 
 # builds
 dist/
