@@ -14,11 +14,54 @@ import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ApiError } from "../api/client.js";
 import { useAddShoppingItem, useShopping } from "../api/shopping.js";
 
 type Toast = { msg: string; severity: "success" | "info" | "warning" };
+
+/** Visible viewport (shrinks when the on-screen keyboard is open). */
+function useVisualViewport(active: boolean) {
+  const read = () => {
+    const v = window.visualViewport;
+    return { height: v?.height ?? window.innerHeight, top: v?.offsetTop ?? 0 };
+  };
+  const [vp, setVp] = useState(read);
+  useEffect(() => {
+    if (!active) return;
+    const v = window.visualViewport;
+    const update = () => setVp(read());
+    update();
+    v?.addEventListener("resize", update);
+    v?.addEventListener("scroll", update);
+    return () => {
+      v?.removeEventListener("resize", update);
+      v?.removeEventListener("scroll", update);
+    };
+  }, [active]);
+  return vp;
+}
+
+/** While open, hardware/swipe back closes the dialog instead of leaving the page. */
+function useCloseOnBack(open: boolean, onBack: () => void) {
+  const cb = useRef(onBack);
+  cb.current = onBack;
+  useEffect(() => {
+    if (!open) return;
+    window.history.pushState({ ...window.history.state, wgDialog: true }, "");
+    let popped = false;
+    const onPop = () => {
+      popped = true;
+      cb.current();
+    };
+    window.addEventListener("popstate", onPop);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      // Closed via button: drop the entry we pushed.
+      if (!popped && window.history.state?.wgDialog) window.history.back();
+    };
+  }, [open]);
+}
 
 /** FAB dialog: free-text add + history suggestion cards. Stays open until "Fertig". */
 export function AddItemDialog({
@@ -35,6 +78,12 @@ export function AddItemDialog({
   const add = useAddShoppingItem();
   const [text, setText] = useState("");
   const [toast, setToast] = useState<Toast | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const vp = useVisualViewport(open);
+  useCloseOnBack(open, () => {
+    setText("");
+    onClose();
+  });
 
   const activeNames = new Set(
     (active.data ?? []).map((i) => i.name.trim().toLowerCase()),
@@ -56,6 +105,7 @@ export function AddItemDialog({
 
   const addItem = (raw: string, fromInput: boolean) => {
     const n = raw.trim();
+    inputRef.current?.focus(); // keep keyboard open
     if (!n) return;
     if (activeNames.has(n.toLowerCase())) {
       setToast({ msg: `„${n}" steht schon auf der Liste`, severity: "info" });
@@ -86,16 +136,26 @@ export function AddItemDialog({
   };
 
   return (
-    <Dialog open={open} onClose={close} fullWidth maxWidth="sm">
+    <Dialog
+      open={open}
+      onClose={close}
+      fullWidth
+      maxWidth="sm"
+      sx={{ "& .MuiDialog-container": { alignItems: "flex-start", pt: `${vp.top}px` } }}
+      PaperProps={{
+        sx: { m: 1, mt: 1, height: `min(${Math.max(vp.height - 16, 200)}px, 560px)`, maxHeight: "none" },
+      }}
+    >
       <DialogTitle>
         Artikel hinzufügen
         <Typography variant="caption" color="text.secondary" display="block">
-          zu: {scope === "wg" ? "WG" : "Privat"}
+          zu: {scope === "wg" ? "WG-List" : "Deine List"}
         </Typography>
       </DialogTitle>
-      <DialogContent>
+      <DialogContent sx={{ display: "flex", flexDirection: "column", overflow: "hidden", pb: 0 }}>
         <TextField
           autoFocus
+          inputRef={inputRef}
           fullWidth
           size="small"
           placeholder="Artikel…"
@@ -107,7 +167,7 @@ export function AddItemDialog({
               addItem(text, true);
             }
           }}
-          sx={{ mt: 1, mb: 2 }}
+          sx={{ mt: 1, mb: 2, flexShrink: 0 }}
           InputProps={{
             endAdornment: (
               <InputAdornment position="end">
@@ -115,6 +175,7 @@ export function AddItemDialog({
                   size="small"
                   aria-label="Hinzufügen"
                   disabled={!text.trim()}
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => addItem(text, true)}
                 >
                   <AddRoundedIcon />
@@ -124,13 +185,13 @@ export function AddItemDialog({
           }}
         />
         {suggestions.length > 0 && (
-          <Stack spacing={1}>
+          <Stack spacing={1} sx={{ overflowY: "auto", flex: 1, minHeight: 0, pb: 1 }}>
             <Typography variant="caption" color="text.secondary">
               Vorschläge
             </Typography>
             {suggestions.map((n) => (
               <Card key={n.toLowerCase()} sx={{ py: 0 }}>
-                <CardActionArea onClick={() => addItem(n, false)} sx={{ py: 1, px: 1.5 }}>
+                <CardActionArea onMouseDown={(e) => e.preventDefault()} onClick={() => addItem(n, false)} sx={{ py: 1, px: 1.5 }}>
                   <Typography noWrap sx={{ fontWeight: 600 }}>
                     {n}
                   </Typography>
