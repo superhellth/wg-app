@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Self-hosted **PWA** for managing a single shared-living household (German *Wohngemeinschaft*). One WG, flat permissions (no admin), EUR only, German UI. Trust-based loose identity: no passwords. Designed to run on a home Raspberry Pi behind Caddy + Cloudflare Tunnel.
+Self-hosted **PWA** for managing a single shared-living household (German *Wohngemeinschaft*). One WG, flat permissions (no admin), EUR only, German UI. Trust-based loose identity: no passwords. Designed to run on a VPS behind Caddy + Cloudflare Tunnel.
 
 Design docs are the source of truth — read them before non-trivial work:
 - `docs/target-functionality.md` — **what** the app does (membership, money split, fixed-cost board, shopping, chores, meetings, activity feed, push matrix).
 - `docs/target-technical.md` — **how** it's built/hosted (stack, data model, auth model, hosting).
 - `docs/impl-shared.md` + `docs/impl-api.md` + `docs/impl-web.md` — **locked implementation decisions** per package (auth headers, onboarding, error envelope, split math, balances, chores/meetings mechanics, cron; and the web design system, member-color signature, IA, identity gate, data layer, push). The most specific source for building out routes/UI.
-- `docs/deploy.md` — Pi deployment via Docker Compose (Caddy, Cloudflare Tunnel, USB-SSD Postgres, R2 backups).
+- `docs/deploy.md` — VPS deployment via Docker Compose (Caddy, Cloudflare Tunnel, Postgres on VPS disk, R2 backups).
 
 > Current state: `shared` complete; the **api service is fully implemented** (all domain routes + services + auth + error envelope + cron worker dispatch); the **web PWA is fully built** (design system, `src/api/` layer, identity gate + onboarding, all tab pages + forms, push/custom SW). All three packages typecheck + build. Not yet done: Drizzle migrations are **not generated** (`pnpm db:generate` before any DB run); no automated tests; the stack hasn't been run against a live Postgres; PWA icons (`/public/icon-192.png`, `icon-512.png`) not yet added.
 
@@ -33,7 +33,7 @@ API-only extras (run in `api/`): `pnpm db:studio` (Drizzle Studio), `pnpm start`
 No test runner is configured yet.
 
 ### Docker (deploy + full-stack run)
-The Pi deploy is fully containerized (`docker-compose.yml`): `db`, one-shot `migrate`, `api`, `worker`, `caddy` (PWA + proxy), `cloudflared`. api + worker share the root `Dockerfile` (multi-stage `build`/`runtime`); the web/Caddy image is `web/Dockerfile`. `docker compose build && docker compose up -d`. Images must be **arm64** for the Pi. See `docs/deploy.md`.
+The VPS deploy is fully containerized (`docker-compose.yml`): `db`, one-shot `migrate`, `api`, `worker`, `caddy` (PWA + proxy), `cloudflared`. api + worker share the root `Dockerfile` (multi-stage `build`/`runtime`); the web/Caddy image is `web/Dockerfile`. `docker compose build && docker compose up -d`. Images must match the VPS CPU architecture (usually amd64). Update: `git pull && docker compose up -d --build` (no `down` needed). See `docs/deploy.md`.
 
 ### Local prerequisites
 - Postgres reachable at `DATABASE_URL`. Copy `.env.example` → `api/.env` (server secrets) and a web `.env` (only `VITE_*` vars are exposed to the client).

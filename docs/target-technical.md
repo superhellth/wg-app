@@ -1,7 +1,7 @@
 # WG App — Target Technical Architecture
 
 > Technical companion to `target-functionality.md`. Defines **how** the app is built, hosted, and distributed.
-> Stack theme: a **self-hosted PWA** — React web app installed to home screen, talking to a Node API on a home Raspberry Pi.
+> Stack theme: a **self-hosted PWA** — React web app installed to home screen, talking to a Node API on a VPS.
 
 ## 0. Stack at a glance
 
@@ -15,15 +15,15 @@
 | Forms/validation | **React Hook Form + Zod** (schemas shared with API) |
 | API | **Node + Fastify, TypeScript** |
 | DB access | **Drizzle ORM** (+ Drizzle migrations) |
-| Database | **PostgreSQL** (`postgres:16-alpine` container; data on USB SSD) |
+| Database | **PostgreSQL** (`postgres:16-alpine` container; data on VPS disk) |
 | Push | **Web Push + VAPID** (server-sent), no Expo, no app stores |
 | Repo | **pnpm monorepo** — `web/` · `api/` · `shared/` |
-| Host | **Raspberry Pi 4 (4 GB)** (dedicated) |
+| Host | **VPS** (dedicated, Docker) |
 | Orchestration | **Docker Compose** — `db`, `migrate`, `api`, `worker`, `caddy`, `cloudflared` |
 | Reverse proxy | **Caddy** container (serves PWA + proxies `/api`) |
 | Reachability | **Cloudflare Tunnel** container (token mode, no port-forward, TLS) |
 | Secrets | **dotenv** `.env` (compose) + `api/.env` (server); gitignored, never baked into images |
-| Backups | nightly `pg_dump` (via `docker compose exec`) → `rclone` → **Cloudflare R2** (host systemd timer) |
+| Backups | nightly `pg_dump` streamed via `rclone rcat` → **Cloudflare R2** (dockerized `backup` service) |
 
 ---
 
@@ -46,7 +46,7 @@
 
 ## 2. API
 
-- **Node + Fastify + TypeScript.** Lightweight, fast on Pi, shares types with the client.
+- **Node + Fastify + TypeScript.** Lightweight, fast, shares types with the client.
 - Houses the real business logic:
   - **Debt-netting / simplification** algorithm (computed server-side on request).
   - **Chore rotation** advancement (advance-on-completion, swap/skip).
@@ -111,7 +111,7 @@ Core tables (indicative):
 ## 5. Push notifications (Web Push)
 
 - **Transport: Web Push protocol + VAPID keypair** (generated once; private key in `api/.env`, public key baked into the web build). No Expo Push Service, no APNs/FCM certs to manage directly.
-- **Server (Pi) sends** all pushes; the **service worker** on each device receives and displays them.
+- **Server (VPS) sends** all pushes; the **service worker** on each device receives and displays them.
 - Triggers (per functional spec — chores + meetings only):
 
 | Trigger | Source |
@@ -122,28 +122,27 @@ Core tables (indicative):
 | Meeting reminder (1h before) | cron worker |
 
 - **No push** for money or shopping events (feed only).
-- Caveat: push only fires while the **Pi is up** (home-server downtime = missed reminders — accepted).
+- Caveat: push only fires while the **VPS is up** (provider downtime = missed reminders — accepted).
 
 ---
 
 ## 6. Hosting & infrastructure
 
-### Hardware
-- **Raspberry Pi 4 Model B**, dedicated to the WG app (no Jellyfin/Home Assistant after all → lean single-purpose setup).
+### Host
+- A **VPS** dedicated to the WG app (single-purpose, Linux + Docker).
 
-### OS / storage (SD-wear mitigations)
-- **Raspberry Pi OS Lite** (no desktop).
-- **PostgreSQL data directory on a USB stick/SSD** (boot stays on SD) for write-endurance — bind-mounted into the `db` container at `/mnt/data/pgdata`.
-- **Reduce Postgres logging** (`log_statement=none`) and trim WAL settings to limit flash writes — passed as `command:` flags to the `db` container.
-- SD/flash is treated as disposable → backups mandatory (§8).
+### Storage
+- **PostgreSQL data directory on the VPS disk**, bind-mounted into the `db` container at `/mnt/data/pgdata`.
+- Postgres logging/WAL trimmed via `command:` flags on the `db` container.
+- The VPS disk is not the only copy → offsite backups mandatory (§8).
 
 ### Orchestration — Docker Compose
-- The whole stack runs as containers; no host-level Node/Postgres/Caddy installs (only Docker itself + one host systemd timer for backups).
+- The whole stack runs as containers; no host-level Node/Postgres/Caddy installs (only Docker itself).
 - Services: **`db`** (postgres), **`migrate`** (one-shot `drizzle-kit migrate`, runs before api/worker), **`api`** (Fastify), **`worker`** (cron; same image as api, different entrypoint), **`caddy`** (PWA + proxy), **`cloudflared`** (tunnel).
 - `restart: unless-stopped` gives auto-start on boot + auto-restart on crash; logs via `docker compose logs`.
-- **Images are arm64** — build on the Pi or cross-build with `buildx --platform linux/arm64`.
+- **Images match the VPS CPU architecture** (usually amd64) — build on the VPS or cross-build with `buildx --platform`.
 - **api + worker share one image** (the root `Dockerfile`, multi-stage `build`/`runtime`); the `migrate` service reuses the `build` stage (it has `drizzle-kit`).
-- (Earlier the spec favored systemd for leanness; switched to Docker Compose to collapse the manual install steps. On a 4 GB Pi the whole stack idles ~0.5–0.7 GB.)
+- (Earlier the spec favored systemd for leanness; switched to Docker Compose to collapse the manual install steps. The whole stack idles ~0.5–0.7 GB.)
 
 ### Reverse proxy — Caddy (container)
 - Serves the **static PWA build** (baked into the Caddy image at `/srv`) and reverse-proxies `/api/*` → `api:3000` over the compose network. See `web/Caddyfile`.
@@ -151,7 +150,7 @@ Core tables (indicative):
 
 ### Reachability — Cloudflare Tunnel (container)
 - `cloudflared` runs in token mode; the public hostname points at `http://caddy:80` (configured in the Cloudflare dashboard).
-- **No port-forwarding, no exposed home IP, no dynamic DNS.** Survives ISP IP changes.
+- **No inbound ports needed**; the origin IP stays hidden behind Cloudflare.
 
 ---
 
@@ -175,8 +174,8 @@ wg-app/
 - Server secrets in `api/.env`: Postgres creds, WG join secret (the shared bearer token), **VAPID private key**, Cloudflare Tunnel token. (No invite-signing secret — invite tokens are opaque random rows.)
 - Web build gets only **public** values (Vite `VITE_*`): API URL, **VAPID public key**.
 
-### Backups — mandatory (SD/USB will fail)
-- **Nightly `pg_dump | gzip`** via systemd timer.
+### Backups — mandatory
+- **Nightly `pg_dump | gzip`** by the dockerized `backup` service.
 - Shipped **offsite** with `rclone` → **Cloudflare R2**.
 - Retention: ~14 daily + a few monthly (data is MB-scale).
 
@@ -195,5 +194,5 @@ wg-app/
 - WebSockets / realtime — pull-based only for v1.
 - Offline writes / sync queue — app-shell offline only.
 - Materialized balances — computed on read.
-- Kubernetes / multi-host orchestration — single-Pi Docker Compose is enough.
+- Kubernetes / multi-host orchestration — single-VPS Docker Compose is enough.
 - Multi-device-per-member secrets / account recovery — N/A under trust-based loose identity.

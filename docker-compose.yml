@@ -1,5 +1,5 @@
-# WG app — full stack for the Raspberry Pi (4 GB).
-# Build arm64 images on a dev machine with buildx, or build on the Pi directly.
+# WG app — full stack for a VPS.
+# Images are built for the host's CPU architecture (build on the VPS or use buildx).
 #
 # Compose reads the top-level .env automatically (POSTGRES_PASSWORD, VITE_*,
 # TUNNEL_TOKEN). App secrets (WG_TOKEN_SECRET, VAPID_*) come from api/.env.
@@ -12,11 +12,11 @@ services:
       POSTGRES_USER: wg
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: wg
-    # Postgres data on a host path (SD card; no USB drive on the Pi).
+    # Postgres data on a host path (VPS disk).
     # Create /mnt/data/pgdata once: sudo mkdir -p /mnt/data/pgdata
     volumes:
       - /mnt/data/pgdata:/var/lib/postgresql/data
-    # Trim logging + WAL footprint for flash endurance.
+    # Trim logging + WAL footprint (small VPS disk / low write volume).
     command:
       - postgres
       - -c
