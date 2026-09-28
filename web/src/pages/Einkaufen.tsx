@@ -2,6 +2,7 @@ import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import type { ShoppingScope } from "@wg/shared";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Snackbar from "@mui/material/Snackbar";
 import Card from "@mui/material/Card";
 import Checkbox from "@mui/material/Checkbox";
 import IconButton from "@mui/material/IconButton";
@@ -38,13 +39,14 @@ export function Einkaufen() {
 
   const selectedItems = items.filter((i) => selected.has(i.id));
 
-  const createExpense = () => {
-    const ids = selectedItems.map((i) => i.id).join(",");
-    const desc = selectedItems.map((i) => i.name).join(", ");
-    navigate(`/geld/neu?items=${ids}&desc=${encodeURIComponent(desc)}`);
-  };
+  const [expenseLink, setExpenseLink] = useState<string | null>(null);
 
   const markSelectedBought = () => {
+    if (scope === "wg") {
+      const ids = selectedItems.map((i) => i.id).join(",");
+      const desc = selectedItems.map((i) => i.name).join(", ");
+      setExpenseLink(`/geld/neu?items=${ids}&desc=${encodeURIComponent(desc)}`);
+    }
     selectedItems.forEach((i) => bought.mutate(i.id));
     setSelected(new Set());
   };
@@ -56,6 +58,7 @@ export function Einkaufen() {
         onChange={(_, v) => {
           setScope(v);
           setSelected(new Set()); // a personal id must never reach "Ausgabe"
+          setExpenseLink(null);
         }}
         variant="fullWidth"
         sx={{ mb: 2 }}
@@ -118,6 +121,28 @@ export function Einkaufen() {
         onClose={() => setDialogOpen(false)}
       />
 
+      <Snackbar
+        open={expenseLink !== null}
+        autoHideDuration={8000}
+        onClose={(_, reason) => reason !== "clickaway" && setExpenseLink(null)}
+        message="Als eingekauft markiert"
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        sx={{ bottom: { xs: 72 } }}
+        action={
+          <Button
+            size="small"
+            color="inherit"
+            onClick={() => {
+              const link = expenseLink;
+              setExpenseLink(null);
+              if (link) navigate(link);
+            }}
+          >
+            Ausgabe erfassen
+          </Button>
+        }
+      />
+
       {/* selection action bar — sits just above the bottom nav */}
       {selected.size > 0 && (
         <Box
@@ -146,11 +171,6 @@ export function Einkaufen() {
             <Button variant="contained" fullWidth onClick={markSelectedBought}>
               Eingekauft ({selected.size})
             </Button>
-            {scope === "wg" && (
-              <Button variant="text" onClick={createExpense}>
-                Ausgabe
-              </Button>
-            )}
           </Box>
         </Box>
       )}

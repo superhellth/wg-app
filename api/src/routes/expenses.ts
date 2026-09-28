@@ -6,7 +6,7 @@ import {
   type SplitType,
   updateExpenseSchema,
 } from "@wg/shared";
-import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { db, schema } from "../db/client.js";
 import { logActivity } from "../lib/activity.js";
@@ -89,13 +89,20 @@ export async function expensesRoutes(app: FastifyInstance) {
         const items = await tx
           .update(schema.shoppingItems)
           .set({ boughtAt: new Date() })
-          .where(inArray(schema.shoppingItems.id, body.shoppingItemIds))
+          .where(
+            and(
+              inArray(schema.shoppingItems.id, body.shoppingItemIds),
+              isNull(schema.shoppingItems.boughtAt),
+            ),
+          )
           .returning();
-        await logActivity(tx, {
-          memberId: actor.id,
-          kind: "shopping.bought",
-          data: { snapshot: items },
-        });
+        if (items.length) {
+          await logActivity(tx, {
+            memberId: actor.id,
+            kind: "shopping.bought",
+            data: { snapshot: items },
+          });
+        }
       }
 
       await logActivity(tx, {
