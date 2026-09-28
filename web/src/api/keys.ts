@@ -6,7 +6,8 @@ export const qk = {
   expenses: ["expenses"] as const,
   expense: (id: string) => ["expenses", id] as const,
   settlements: ["settlements"] as const,
-  shopping: (history = false) => ["shopping", { history }] as const,
+  shopping: (scope: "wg" | "personal", history = false) =>
+    ["shopping", { scope, history }] as const,
   shoppingAll: ["shopping"] as const,
   chores: ["chores"] as const,
   wgConfig: ["wgConfig"] as const,
