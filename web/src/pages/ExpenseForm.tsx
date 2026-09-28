@@ -183,12 +183,6 @@ export function ExpenseForm() {
       </Stack>
 
       <Stack spacing={2.5}>
-        {shoppingItemIds.length > 0 && (
-          <Alert severity="info">
-            {shoppingItemIds.length} Artikel werden als gekauft markiert.
-          </Alert>
-        )}
-
         <TextField
           label="Beschreibung"
           value={description}
