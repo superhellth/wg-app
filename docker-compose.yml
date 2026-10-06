@@ -35,13 +35,13 @@ services:
       timeout: 5s
       retries: 5
 
-  # One-shot: apply Drizzle migrations, then exit. Uses the build stage (has
-  # drizzle-kit). Requires committed migrations in api/drizzle (pnpm db:generate).
+  # One-shot: apply Drizzle migrations, then exit. Uses the runtime stage (has
+  # migrate script). Requires committed migrations in api/drizzle (pnpm db:generate).
   migrate:
     build:
       context: .
-      target: build
-    command: pnpm --filter @wg/api db:migrate
+      target: runtime
+    command: node dist/migrate.js
     env_file: ./api/.env
     environment:
       DATABASE_URL: postgres://wg:${POSTGRES_PASSWORD}@db:5432/wg

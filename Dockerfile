@@ -1,7 +1,6 @@
 # API + cron worker image (monorepo build, context = repo root).
-# Two stages reused by docker-compose:
-#   target: build   → full toolchain (used by the one-shot `migrate` service)
-#   target: runtime → slim prod image (used by `api` and `worker`)
+# Only the runtime stage is used by docker-compose for `api`, `worker`
+# and `migrate`
 
 FROM node:20-alpine AS base
 RUN corepack enable
