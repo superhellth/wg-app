@@ -1,8 +1,8 @@
 # WG app — full stack for a VPS.
 # Images are built for the host's CPU architecture (build on the VPS or use buildx).
 #
-# Compose reads the top-level .env automatically (POSTGRES_PASSWORD, VITE_*,
-# TUNNEL_TOKEN). App secrets (WG_TOKEN_SECRET, VAPID_*) come from api/.env.
+# Compose reads the top-level .env automatically (POSTGRES_PASSWORD,
+# TUNNEL_TOKEN, R2_*). App secrets (WG_TOKEN_SECRET, VAPID_*) come from api/.env.
 
 services:
   db:
@@ -107,14 +107,11 @@ services:
       db:
         condition: service_healthy
 
-  # Static PWA + reverse proxy. VITE_* baked at build time.
+  # Static PWA + reverse proxy. No build-time config (VAPID key fetched from api).
   caddy:
     build:
       context: .
       dockerfile: web/Dockerfile
-      args:
-        VITE_API_URL: ${VITE_API_URL}
-        VITE_VAPID_PUBLIC_KEY: ${VITE_VAPID_PUBLIC_KEY}
     restart: unless-stopped
     ports:
       - "80:80" # for local LAN access / debugging; the tunnel uses the internal net

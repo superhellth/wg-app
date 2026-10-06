@@ -1,5 +1,5 @@
 # PWA build + Caddy static server / reverse proxy (context = repo root).
-# VITE_* values are baked at build time (passed as build args from compose).
+# No build-time config: API is same-origin, VAPID key is fetched from the api.
 
 FROM node:20-alpine AS build
 RUN corepack enable
@@ -10,10 +10,6 @@ COPY web/package.json web/
 RUN pnpm install --frozen-lockfile
 COPY shared/ shared/
 COPY web/ web/
-ARG VITE_API_URL
-ARG VITE_VAPID_PUBLIC_KEY
-ENV VITE_API_URL=$VITE_API_URL
-ENV VITE_VAPID_PUBLIC_KEY=$VITE_VAPID_PUBLIC_KEY
 RUN pnpm --filter @wg/shared build
 RUN pnpm --filter @wg/web build
 

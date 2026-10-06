@@ -1,7 +1,5 @@
 import { devicesApi } from "../api/devices.js";
 
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY ?? "";
-
 export function pushSupported(): boolean {
   return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 }
@@ -32,17 +30,20 @@ export type PushResult = "ok" | "denied" | "unsupported" | "no-key" | "error";
 /** Subscribe this device for Web Push and register it for `memberId`. */
 export async function registerPush(memberId: string): Promise<PushResult> {
   if (!pushSupported()) return "unsupported";
-  if (!VAPID_PUBLIC_KEY) return "no-key";
   try {
+    // Permission first: iOS requires it inside the user gesture, before any await.
     const permission = await Notification.requestPermission();
     if (permission !== "granted") return "denied";
+
+    const { publicKey } = await devicesApi.vapidPublicKey();
+    if (!publicKey) return "no-key";
 
     const reg = await navigator.serviceWorker.ready;
     const sub =
       (await reg.pushManager.getSubscription()) ??
       (await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
+        applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
       }));
 
     const json = sub.toJSON();
