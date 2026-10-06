@@ -1,7 +1,7 @@
 #!/bin/sh
 # Dockerized nightly Postgres backup → Cloudflare R2 (S3-compatible) via rclone.
 #
-# Everything is configured through env (see docker-compose.yml / .env): the R2
+# Everything is configured through env (see docker-compose.yaml / .env): the R2
 # remote is synthesised from RCLONE_CONFIG_R2_* vars, so there is no host-level
 # rclone install, no interactive `rclone config`, and no systemd timer. The
 # container just sleeps until the next scheduled time and runs the dump.

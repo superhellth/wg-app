@@ -1,0 +1,6 @@
+services:
+  migrate: { build: { context: ., target: runtime } }
+  api:     { build: { context: ., target: runtime } }
+  worker:  { build: { context: ., target: runtime } }
+  backup:  { build: { context: ./backup } }
+  caddy:   { build: { context: ., dockerfile: web/Dockerfile } }
