@@ -1,5 +1,5 @@
 # Cloudflare Tunnel terminates public TLS, so Caddy serves plain HTTP on :80.
-:80 {
+:8080 {
 	root * /srv
 	encode gzip
 

@@ -108,7 +108,7 @@ services:
     image: ghcr.io/superhellth/wg-app-web:${TAG:-latest}
     restart: unless-stopped
     ports:
-      - "80:80" # for local LAN access / debugging; the tunnel uses the internal net
+      - "80:8080" # for local LAN access / debugging; the tunnel uses the internal net
     depends_on:
       - api
 

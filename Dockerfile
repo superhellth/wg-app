@@ -24,5 +24,6 @@ FROM node:20-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /app /app
+USER 1000:1000
 EXPOSE 3000
 CMD ["node", "dist/index.js"]
