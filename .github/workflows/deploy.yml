@@ -25,9 +25,28 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm build
 
-  publish:
+  version:
     needs: check
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.read.outputs.version }}
+      is_new: ${{ steps.read.outputs.is_new }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: read
+        run: |
+          version=$(jq -r .version package.json)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" > /dev/null; then
+            echo "is_new=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_new=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  publish:
+    needs: version
+    if: needs.version.outputs.is_new == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -61,8 +80,20 @@ jobs:
           tags: |
             ghcr.io/superhellth/wg-app-${{ matrix.name }}:latest
             ghcr.io/superhellth/wg-app-${{ matrix.name }}:sha-${{ github.sha }}
+            ghcr.io/superhellth/wg-app-${{ matrix.name }}:${{ needs.version.outputs.version }}
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+  tag:
+    needs: [version, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          git tag "v${{ needs.version.outputs.version }}"
+          git push origin "v${{ needs.version.outputs.version }}"
 
   deploy:
     needs: publish
